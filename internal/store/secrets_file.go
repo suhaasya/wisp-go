@@ -124,6 +124,21 @@ func (f *FileSecrets) Set(profileID string, kind SecretKind, value []byte) error
 	return f.persistLocked()
 }
 
+// Delete removes one secret slot for a profile.
+func (f *FileSecrets) Delete(profileID string, kind SecretKind) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if !f.unlocked {
+		return ErrSecretsLocked
+	}
+	acc := SecretAccountKey(profileID, kind)
+	if old, ok := f.records[acc]; ok {
+		zeroBytes(old)
+		delete(f.records, acc)
+	}
+	return f.persistLocked()
+}
+
 func (f *FileSecrets) DeleteAll(profileID string) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()

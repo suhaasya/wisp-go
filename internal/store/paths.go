@@ -59,6 +59,11 @@ func (p Paths) SettingsJSON() string {
 	return filepath.Join(p.ConfigDir, "settings.json")
 }
 
+// ConnectionsJSON is the saved connection profiles file.
+func (p Paths) ConnectionsJSON() string {
+	return filepath.Join(p.ConfigDir, "connections.json")
+}
+
 // SecretsBin is the encrypted secrets fallback file.
 func (p Paths) SecretsBin() string {
 	return filepath.Join(p.DataDir, "secrets.bin")

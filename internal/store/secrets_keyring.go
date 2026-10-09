@@ -31,6 +31,16 @@ func (k *KeyringSecrets) Set(profileID string, kind SecretKind, value []byte) er
 	return keyring.Set(secretServiceName, user, string(value))
 }
 
+// Delete removes one secret slot for a profile.
+func (k *KeyringSecrets) Delete(profileID string, kind SecretKind) error {
+	user := SecretAccountKey(profileID, kind)
+	err := keyring.Delete(secretServiceName, user)
+	if errors.Is(err, keyring.ErrNotFound) {
+		return nil
+	}
+	return err
+}
+
 func (k *KeyringSecrets) DeleteAll(profileID string) error {
 	var firstErr error
 	for _, kind := range allSecretKinds {

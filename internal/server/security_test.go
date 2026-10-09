@@ -16,7 +16,7 @@ func startSecurityServer(t *testing.T, now func() time.Time) (*httptest.Server, 
 	t.Helper()
 	g := server.NewGuardWithClock(0, now)
 	mux := http.NewServeMux()
-	g.RegisterRoutes(mux, "test", nil, nil, nil, func() (map[string]any, error) { return map[string]any{}, nil })
+	g.RegisterRoutes(mux, "test", nil, nil, nil, nil, func() (map[string]any, error) { return map[string]any{}, nil })
 	mux.HandleFunc("/api/v1/mutate", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})

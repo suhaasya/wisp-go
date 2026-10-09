@@ -12,6 +12,7 @@ import (
 type AppHandlers struct {
 	Settings      http.Handler
 	Secrets       http.Handler
+	Connections   http.Handler
 	HelloSettings SettingsSnapshot
 }
 
@@ -28,10 +29,15 @@ func NewAppHandlers(settingsPath string, paths store.Paths, probe store.KeyringP
 	if err != nil {
 		return nil, fmt.Errorf("secrets: %w", err)
 	}
+	profileStore := store.NewProfileStore(paths.ConnectionsJSON())
+	if _, err := profileStore.Load(); err != nil {
+		slog.Warn("connections load", "err", err)
+	}
 	snap := func() (map[string]any, error) { return settingsStore.DocumentJSON() }
 	return &AppHandlers{
 		Settings:      NewSettingsHandler(settingsStore, hub),
 		Secrets:       NewSecretsHandler(secretsStore),
+		Connections:   NewConnectionsHandler(profileStore, secretsStore),
 		HelloSettings: snap,
 	}, nil
 }

@@ -6,11 +6,12 @@ VERSION ?= dev
 
 web:
 	cd web && npm ci && npm run build
+	node --experimental-strip-types tools/sizes.ts
 
 build: web
 	go build -trimpath -ldflags '-s -w -X main.version=$(VERSION)' -o bin/wisp ./cmd/wisp
 
-test:
+test: web
 	go test ./...
 	npm --prefix web test
 

@@ -2,25 +2,30 @@ package server
 
 import "net/http"
 
-const baseCSP = "default-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
-
 func applySecurityHeaders(w http.ResponseWriter, path string) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Referrer-Policy", "no-referrer")
 	if len(path) >= 5 && path[:5] == "/api/" {
 		w.Header().Set("Cache-Control", "no-store")
 	}
-	// Never send CORS headers.
 	w.Header().Del("Access-Control-Allow-Origin")
 	w.Header().Del("Access-Control-Allow-Credentials")
 }
 
-func setCSPDefault(w http.ResponseWriter) {
-	w.Header().Set("Content-Security-Policy", baseCSP+"; style-src 'self'")
+func cspBase(dev bool) string {
+	connect := "connect-src 'self'"
+	if dev {
+		connect = "connect-src 'self' ws://127.0.0.1:5173 ws://localhost:5173"
+	}
+	return "default-src 'self'; script-src 'self'; img-src 'self' data:; " + connect + "; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 }
 
-func setCSPWithNonce(w http.ResponseWriter, nonce string) {
-	w.Header().Set("Content-Security-Policy", baseCSP+"; style-src 'self' 'nonce-"+nonce+"'")
+func setCSPDefault(w http.ResponseWriter, dev bool) {
+	w.Header().Set("Content-Security-Policy", cspBase(dev))
+}
+
+func setCSPWithNonce(w http.ResponseWriter, nonce string, dev bool) {
+	w.Header().Set("Content-Security-Policy", cspBase(dev)+"; style-src 'self' 'nonce-"+nonce+"'")
 }
 
 type responseWriter struct {
@@ -45,6 +50,6 @@ func (w *responseWriter) apply() {
 	}
 	applySecurityHeaders(w.ResponseWriter, w.path)
 	if w.Header().Get("Content-Security-Policy") == "" {
-		setCSPDefault(w.ResponseWriter)
+		setCSPDefault(w.ResponseWriter, w.guard != nil && w.guard.dev)
 	}
 }

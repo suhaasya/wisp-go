@@ -30,6 +30,7 @@ type launchEntry struct {
 // Guard enforces local-only access, launch tokens, sessions, and CSRF.
 type Guard struct {
 	port int
+	dev  bool
 
 	mu           sync.Mutex
 	sessions     map[string]Session
@@ -55,6 +56,11 @@ func NewGuardWithClock(port int, clock func() time.Time) *Guard {
 // SetPort updates the expected loopback port (after listen).
 func (g *Guard) SetPort(port int) {
 	g.port = port
+}
+
+// SetDev enables development CSP exceptions (Vite HMR).
+func (g *Guard) SetDev(dev bool) {
+	g.dev = dev
 }
 
 // MintLaunchURL creates a one-time launch token URL for the launcher or handoff.
@@ -89,8 +95,6 @@ func (g *Guard) CSRF(r *http.Request) string {
 func (g *Guard) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/auth/exchange", g.handleExchange)
 	mux.HandleFunc("/api/v1/hello", g.handleHello)
-	mux.HandleFunc("/", g.handleIndex)
-	mux.Handle("/assets/", http.HandlerFunc(g.handleAsset))
 }
 
 func (g *Guard) handleExchange(w http.ResponseWriter, r *http.Request) {
@@ -171,28 +175,6 @@ func (g *Guard) handleHello(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{"csrf": csrf})
-}
-
-func (g *Guard) handleIndex(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	nonce, err := randomHex(8)
-	if err != nil {
-		http.Error(w, "server error", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Cache-Control", "no-store")
-	setCSPWithNonce(w, nonce)
-	body := `<!doctype html><html><head><meta name="csp-nonce" content="` + nonce + `"></head><body>Wisp</body></html>`
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	_, _ = w.Write([]byte(body))
-}
-
-func (g *Guard) handleAsset(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	http.NotFound(w, r)
 }
 
 func (g *Guard) sessionValid(r *http.Request) bool {

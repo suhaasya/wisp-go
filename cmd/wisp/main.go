@@ -11,6 +11,7 @@ import (
 
 	"github.com/suhaasya/wisp-go/internal/server"
 	"github.com/suhaasya/wisp-go/internal/store"
+	"github.com/suhaasya/wisp-go/web"
 )
 
 var version = "dev"
@@ -64,7 +65,7 @@ func runServer(cfg RunConfig) {
 		LogLevel:  cfg.LogLevel,
 		NoBrowser: cfg.NoBrowser,
 		AppWindow: cfg.AppWindow,
-		WebRoot:   server.DefaultWebRoot(),
+		AssetFS:   web.DistFS(),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

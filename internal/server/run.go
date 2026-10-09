@@ -3,11 +3,11 @@ package server
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/suhaasya/wisp-go/internal/api"
@@ -31,7 +31,7 @@ type StartConfig struct {
 	NoBrowser bool
 	AppWindow bool
 	Launcher  Launcher
-	WebRoot   string
+	AssetFS   fs.FS
 }
 
 // RunOrHandoff starts the primary server or handoffs to an existing instance.
@@ -71,8 +71,11 @@ func runPrimary(ctx context.Context, cfg StartConfig) error {
 	LogStartupDuration(cfg.LogLevel, started)
 
 	guard := NewGuard(port)
+	guard.SetDev(cfg.Dev)
 	root := http.NewServeMux()
-	registerRoutes(root, cfg, guard, secretPath)
+	if err := registerRoutes(root, cfg, guard, secretPath); err != nil {
+		return err
+	}
 
 	srv := NewHTTPServer(root)
 	idle := NewIdleLifecycle(cfg.IdleExit, func() {
@@ -168,14 +171,27 @@ func RunStop(paths RuntimePaths) error {
 	return StopProcess(rec.PID)
 }
 
-func registerRoutes(root *http.ServeMux, cfg StartConfig, guard *Guard, secretPath string) {
+func registerRoutes(root *http.ServeMux, cfg StartConfig, guard *Guard, secretPath string) error {
 	root.Handle("/internal/handoff", api.NewHandoffHandler(secretPath, guard.MintLaunchURL))
 	inner := http.NewServeMux()
 	guard.RegisterRoutes(inner)
-	if cfg.Dev && cfg.WebRoot != "" {
-		inner.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir(filepath.Join(cfg.WebRoot, "dist/assets")))))
+	assetFS := cfg.AssetFS
+	if assetFS == nil {
+		assetFS = emptyFS{}
 	}
+	st, err := NewStatic(assetFS, cfg.Dev)
+	if err != nil {
+		return err
+	}
+	st.Register(inner)
 	root.Handle("/", guard.Wrap(inner))
+	return nil
+}
+
+type emptyFS struct{}
+
+func (emptyFS) Open(name string) (fs.File, error) {
+	return nil, fs.ErrNotExist
 }
 
 func ensureRuntimeDir(dir string) error {
@@ -190,12 +206,4 @@ func RuntimePathsFromStore(runtimeDir, instanceJSON, instanceLock, handoffSecret
 		InstanceLock:  instanceLock,
 		HandoffSecret: handoffSecret,
 	}
-}
-
-func DefaultWebRoot() string {
-	wd, err := os.Getwd()
-	if err != nil {
-		return "web"
-	}
-	return filepath.Join(wd, "web")
 }

@@ -15,21 +15,31 @@ const profilesVersion = 1
 
 // Profile is a saved connection definition without secrets.
 type Profile struct {
-	ID           string      `json:"id"`
-	Name         string      `json:"name"`
-	Folder       string      `json:"folder"`
-	Engine       string      `json:"engine"`
-	Transport    Transport   `json:"transport"`
-	User         string      `json:"user"`
-	Database     string      `json:"database"`
-	PasswordMode string      `json:"password_mode"`
-	SSL          SSLConfig   `json:"ssl"`
-	SSH          *SSHConfig  `json:"ssh,omitempty"`
-	Env          string      `json:"env"`
-	ReadOnly     bool        `json:"read_only"`
-	SafeMode     bool        `json:"safe_mode"`
-	Options      ConnOptions `json:"options"`
-	LastUsed     *time.Time  `json:"last_used,omitempty"`
+	ID           string          `json:"id"`
+	Name         string          `json:"name"`
+	Folder       string          `json:"folder"`
+	Engine       string          `json:"engine"`
+	Transport    Transport       `json:"transport"`
+	User         string          `json:"user"`
+	Database     string          `json:"database"`
+	PasswordMode string          `json:"password_mode"`
+	SSL          SSLConfig       `json:"ssl"`
+	SSH          *SSHConfig      `json:"ssh,omitempty"`
+	Env          string          `json:"env"`
+	ReadOnly     bool            `json:"read_only"`
+	SafeMode     bool            `json:"safe_mode"`
+	Options      ConnOptions     `json:"options"`
+	Advanced     ProfileAdvanced `json:"advanced"`
+	LastUsed     *time.Time      `json:"last_used,omitempty"`
+}
+
+// ProfileAdvanced holds session defaults configured on connect.
+type ProfileAdvanced struct {
+	DefaultSchema       string `json:"default_schema,omitempty"`
+	TimeZone            string `json:"time_zone,omitempty"`
+	StatementTimeoutSec int    `json:"statement_timeout_sec,omitempty"`
+	KeepAliveSec        int    `json:"keep_alive_sec,omitempty"`
+	RunOnConnect        string `json:"run_on_connect,omitempty"`
 }
 
 // Transport describes how to reach the database server.

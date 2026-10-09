@@ -2,6 +2,25 @@ import { useEffect, useState } from "preact/hooks";
 import type { ComponentType } from "preact";
 import type { Route } from "../router";
 
+function LazyConnectionForm({ profileId }: { profileId?: string }) {
+  const [Screen, setScreen] = useState<ComponentType<{ profileId?: string }> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    import("./connection-form").then((mod) => {
+      if (!cancelled) {
+        setScreen(() => mod.ConnectionForm);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (!Screen) {
+    return <div class="flex flex-1 bg-canvas" aria-busy="true" />;
+  }
+  return <Screen profileId={profileId} />;
+}
+
 function LazyConnectionsScreen() {
   const [Screen, setScreen] = useState<ComponentType | null>(null);
   useEffect(() => {
@@ -26,18 +45,9 @@ export function RouteScreen({ route: r }: { route: Route }) {
     case "connections":
       return <LazyConnectionsScreen />;
     case "connection-new":
-      return (
-        <section class="p-6">
-          <h2 class="text-15 font-semibold text-ink">New connection</h2>
-        </section>
-      );
+      return <LazyConnectionForm />;
     case "connection-edit":
-      return (
-        <section class="p-6">
-          <h2 class="text-15 font-semibold text-ink">Edit connection</h2>
-          <p class="text-13 text-ink-2">{r.id}</p>
-        </section>
-      );
+      return <LazyConnectionForm profileId={r.id} />;
     case "workspace":
       return (
         <section class="p-6">

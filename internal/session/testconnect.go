@@ -1,0 +1,57 @@
+package session
+
+import (
+	"context"
+	"time"
+
+	"github.com/suhaasya/wisp-go/internal/driver"
+	"github.com/suhaasya/wisp-go/internal/driver/mysql"
+	"github.com/suhaasya/wisp-go/internal/driver/postgres"
+	"github.com/suhaasya/wisp-go/internal/store"
+)
+
+// TestConnect opens a connection from a profile draft and pings the server.
+func TestConnect(ctx context.Context, p store.Profile, password []byte) (driver.Conn, time.Duration, driver.ServerInfo, error) {
+	params := driver.ConnectParams{
+		Host:                    p.Transport.Host,
+		Port:                    p.Transport.Port,
+		DB:                      p.Database,
+		User:                    p.User,
+		Password:                password,
+		ConnectTimeout:          10 * time.Second,
+		AllowPublicKeyRetrieval: p.Options.AllowPublicKeyRetrieval,
+	}
+	if p.Advanced.StatementTimeoutSec > 0 {
+		params.StatementTimeout = time.Duration(p.Advanced.StatementTimeoutSec) * time.Second
+	}
+	var d driver.Driver
+	switch p.Engine {
+	case "postgres":
+		d = postgres.Driver{}
+	case "mysql", "mariadb":
+		d = mysql.Driver{}
+	default:
+		return nil, 0, driver.ServerInfo{}, errBadEngine
+	}
+	conn, err := d.Open(ctx, params)
+	if err != nil {
+		return nil, 0, driver.ServerInfo{}, err
+	}
+	ping, err := conn.Ping(ctx)
+	if err != nil {
+		_ = conn.Close()
+		return nil, 0, driver.ServerInfo{}, err
+	}
+	info, err := conn.ServerInfo(ctx)
+	if err != nil {
+		_ = conn.Close()
+		return nil, 0, driver.ServerInfo{}, err
+	}
+	return conn, ping, info, nil
+}
+
+var errBadEngine = &engineError{}
+
+type engineError struct{}
+
+func (e *engineError) Error() string { return "engine must be postgres, mysql, or mariadb" }

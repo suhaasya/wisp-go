@@ -190,7 +190,7 @@ func registerRoutes(root *http.ServeMux, cfg StartConfig, guard *Guard, secretPa
 	if err != nil {
 		return err
 	}
-	guard.RegisterRoutes(inner, version, hub, handlers.Settings, handlers.Secrets, handlers.Connections, handlers.HelloSettings)
+	guard.RegisterRoutes(inner, version, hub, handlers.Settings, handlers.Secrets, handlers.Connections, handlers.ConnectionTest, handlers.FS, handlers.HelloSettings)
 	assetFS := cfg.AssetFS
 	if assetFS == nil {
 		assetFS = emptyFS{}

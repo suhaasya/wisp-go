@@ -19,6 +19,13 @@ export type ConnectionProfile = {
   read_only: boolean;
   safe_mode: boolean;
   options: { allow_public_key_retrieval?: boolean };
+  advanced?: {
+    default_schema?: string;
+    time_zone?: string;
+    statement_timeout_sec?: number;
+    keep_alive_sec?: number;
+    run_on_connect?: string;
+  };
   last_used?: string | null;
   has_password: boolean;
 };

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"net"
@@ -60,19 +59,22 @@ func runPrimary(ctx context.Context, cfg StartConfig) error {
 	}
 
 	started := time.Now()
-	ln, port, err := listenLoopback(cfg.Port)
+	ln, err := ListenLoopback(cfg.Port)
 	if err != nil {
 		return err
 	}
+	tcp, ok := ln.Addr().(*net.TCPAddr)
+	if !ok {
+		return fmt.Errorf("unexpected listener addr")
+	}
+	port := tcp.Port
 	LogStartupDuration(cfg.LogLevel, started)
 
-	mux := http.NewServeMux()
-	registerRoutes(mux, cfg, port, secretPath)
+	guard := NewGuard(port)
+	root := http.NewServeMux()
+	registerRoutes(root, cfg, guard, secretPath)
 
-	srv := &http.Server{
-		Handler:           mux,
-		ReadHeaderTimeout: 5 * time.Second,
-	}
+	srv := NewHTTPServer(root)
 	idle := NewIdleLifecycle(cfg.IdleExit, func() {
 		_ = srv.Shutdown(context.Background())
 	})
@@ -93,10 +95,7 @@ func runPrimary(ctx context.Context, cfg StartConfig) error {
 	_, _ = fmt.Fprintf(os.Stdout, "Wisp running at http://127.0.0.1:%d/ (press Ctrl+C to stop)\n", port)
 
 	if !cfg.NoBrowser {
-		launchURL, err := mintLaunchURL(port)
-		if err != nil {
-			return err
-		}
+		launchURL := guard.MintLaunchURL()
 		l := cfg.Launcher
 		if l.Run == nil {
 			l = DefaultLauncher()
@@ -169,45 +168,14 @@ func RunStop(paths RuntimePaths) error {
 	return StopProcess(rec.PID)
 }
 
-func listenLoopback(port int) (net.Listener, int, error) {
-	addr := fmt.Sprintf("127.0.0.1:%d", port)
-	lc := net.ListenConfig{}
-	ln, err := lc.Listen(context.Background(), "tcp", addr)
-	if err != nil {
-		return nil, 0, err
-	}
-	tcp, ok := ln.Addr().(*net.TCPAddr)
-	if !ok {
-		return nil, 0, fmt.Errorf("unexpected listener addr")
-	}
-	return ln, tcp.Port, nil
-}
-
-func registerRoutes(mux *http.ServeMux, cfg StartConfig, port int, secretPath string) {
-	mux.Handle("/internal/handoff", api.NewHandoffHandler(secretPath, func() string {
-		url, err := mintLaunchURL(port)
-		if err != nil {
-			return fmt.Sprintf("http://127.0.0.1:%d/", port)
-		}
-		return url
-	}))
+func registerRoutes(root *http.ServeMux, cfg StartConfig, guard *Guard, secretPath string) {
+	root.Handle("/internal/handoff", api.NewHandoffHandler(secretPath, guard.MintLaunchURL))
+	inner := http.NewServeMux()
+	guard.RegisterRoutes(inner)
 	if cfg.Dev && cfg.WebRoot != "" {
-		mux.Handle("/", http.FileServer(http.Dir(cfg.WebRoot)))
-	} else {
-		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("Wisp"))
-		})
+		inner.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir(filepath.Join(cfg.WebRoot, "dist/assets")))))
 	}
-}
-
-func mintLaunchURL(port int) (string, error) {
-	tok, err := randomBytes(32)
-	if err != nil {
-		return "", err
-	}
-	enc := base64.RawURLEncoding.EncodeToString(tok)
-	return fmt.Sprintf("http://127.0.0.1:%d/auth/exchange?t=%s", port, enc), nil
+	root.Handle("/", guard.Wrap(inner))
 }
 
 func ensureRuntimeDir(dir string) error {

@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5/pgconn"
+	sshtransport "github.com/suhaasya/wisp-go/internal/transport/ssh"
 )
 
 // ConnectionError is a user-facing connection failure with technical detail.
@@ -104,6 +105,14 @@ func MapConnectionError(err error) ConnectionError {
 		}
 	}
 	low := strings.ToLower(err.Error())
+	var mismatch *sshtransport.HostKeyMismatch
+	if errors.As(err, &mismatch) {
+		return ConnectionError{
+			Code:    "ssh_host_key_mismatch",
+			Message: "The SSH host key changed. Connection blocked for safety.",
+			Detail:  err.Error(),
+		}
+	}
 	if strings.Contains(low, "ssh") {
 		return ConnectionError{
 			Code:    "ssh_failed",

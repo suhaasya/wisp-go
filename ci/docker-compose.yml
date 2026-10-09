@@ -240,3 +240,36 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  ssh2:
+    build: ./ssh
+    volumes:
+      - ./ssh/hostkeys/ssh2:/mnt/hostkeys:ro
+      - ./ssh/authorized_keys:/mnt/authorized_keys:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep sshd >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  ssh1:
+    build: ./ssh
+    ports:
+      - "2221:22"
+    volumes:
+      - ./ssh/hostkeys/ssh1:/mnt/hostkeys:ro
+      - ./ssh/authorized_keys:/mnt/authorized_keys:ro
+    depends_on:
+      ssh2:
+        condition: service_healthy
+      pg16:
+        condition: service_healthy
+      mysql84:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep sshd >/dev/null"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s

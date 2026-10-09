@@ -21,6 +21,25 @@ function LazyConnectionForm({ profileId }: { profileId?: string }) {
   return <Screen profileId={profileId} />;
 }
 
+function LazyWorkspace({ sessionId }: { sessionId: string }) {
+  const [Screen, setScreen] = useState<ComponentType<{ sessionId: string }> | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    import("./workspace").then((mod) => {
+      if (!cancelled) {
+        setScreen(() => mod.WorkspaceScreen);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (!Screen) {
+    return <div class="flex flex-1 bg-canvas" aria-busy="true" />;
+  }
+  return <Screen sessionId={sessionId} />;
+}
+
 function LazyConnectionsScreen() {
   const [Screen, setScreen] = useState<ComponentType | null>(null);
   useEffect(() => {
@@ -49,12 +68,7 @@ export function RouteScreen({ route: r }: { route: Route }) {
     case "connection-edit":
       return <LazyConnectionForm profileId={r.id} />;
     case "workspace":
-      return (
-        <section class="p-6">
-          <h2 class="text-15 font-semibold text-ink">Workspace</h2>
-          <p class="text-13 text-ink-2">Session {r.sessionId}</p>
-        </section>
-      );
+      return <LazyWorkspace sessionId={r.sessionId} />;
     default:
       return null;
   }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"strings"
 	"time"
@@ -88,6 +89,12 @@ func connConfig(p driver.ConnectParams, useTLS bool) (*pgx.ConnConfig, error) {
 			return nil, err
 		}
 		cfg.TLSConfig = tlsCfg
+	}
+	if p.DialContext != nil {
+		dial := p.DialContext
+		cfg.DialFunc = func(ctx context.Context, network, addr string) (net.Conn, error) {
+			return dial(ctx, network, addr)
+		}
 	}
 	cfg.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 	return cfg, nil

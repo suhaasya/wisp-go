@@ -18,8 +18,10 @@ import { Tabs } from "../../ui/Tabs";
 import { pushToast } from "../../ui/Toast";
 import { AdvancedTab } from "./advanced";
 import { GeneralTab } from "./general";
+import { SshTab } from "./ssh";
 import { SslTab } from "./ssl";
 import { TestResultLine } from "./test-result";
+import { HostKeyDialog, type HostKeyPrompt } from "../../dialogs/host-key";
 import { looksLikeConnectionURL, parseConnectionURL, takeImportDraft } from "../connections/paste";
 
 export type ConnectionFormProps = {
@@ -32,9 +34,10 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
   const [hasStoredPassword, setHasStoredPassword] = useState(false);
   const [testState, setTestState] = useState<{
     running?: boolean;
-    ok?: { latencyMs: number; server: string; tls?: string };
+    ok?: { latencyMs: number; server: string; tls?: string; viaSSH?: boolean };
     error?: string;
   }>({});
+  const [hostKeyPrompt, setHostKeyPrompt] = useState<HostKeyPrompt | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerField, setPickerField] = useState<"caFile" | "clientCert" | "clientKey" | null>(null);
   const testAbort = useRef<AbortController | null>(null);
@@ -77,23 +80,52 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
     const ac = new AbortController();
     testAbort.current = ac;
     setTestState({ running: true });
+    setHostKeyPrompt(null);
     try {
       const body = buildTestRequest(form, hasStoredPassword);
-      const out = await request<{ ok: boolean; latency_ms: number; server: string; tls?: string }>(
-        "POST",
-        "/api/v1/connections/test",
-        body,
-        { signal: ac.signal },
-      );
+      const out = await request<{
+        ok: boolean;
+        latency_ms: number;
+        server: string;
+        tls?: string;
+        via_ssh?: boolean;
+      }>("POST", "/api/v1/connections/test", body, { signal: ac.signal });
       setTestState({
-        ok: { latencyMs: out.latency_ms, server: out.server, tls: out.tls },
+        ok: {
+          latencyMs: out.latency_ms,
+          server: out.server,
+          tls: out.tls,
+          viaSSH: out.via_ssh,
+        },
       });
     } catch (e) {
       if (ac.signal.aborted) {
         return;
       }
+      if (e instanceof ApiError && e.code === "host_key_needed" && e.hostKey) {
+        setHostKeyPrompt(e.hostKey);
+        setTestState({});
+        return;
+      }
       const msg = e instanceof ApiError ? e.message : "Test failed";
       setTestState({ error: msg });
+    }
+  };
+
+  const trustHostKey = async () => {
+    if (!hostKeyPrompt) {
+      return;
+    }
+    try {
+      await request("POST", "/api/v1/hostkeys/accept", {
+        host: hostKeyPrompt.host,
+        port: hostKeyPrompt.port,
+        fingerprint: hostKeyPrompt.fingerprint,
+      });
+      setHostKeyPrompt(null);
+      await runTest();
+    } catch (e) {
+      pushToast(e instanceof ApiError ? e.message : "Could not trust host key", "error");
     }
   };
 
@@ -190,7 +222,14 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
           <AdvancedTab form={form} onChange={setForm} onBrowseFile={() => setPickerOpen(true)} />
         ) : null}
         {tab === "ssh" ? (
-          <p class="px-5 py-4 text-13 text-ink-2">SSH tunnel settings ship in LW-020.</p>
+          <SshTab
+            form={form}
+            onChange={setForm}
+            onBrowseKey={() => {
+              setPickerField(null);
+              setPickerOpen(true);
+            }}
+          />
         ) : null}
         <footer class="flex items-center gap-2 border-t border-line-2 bg-raise px-5 py-3">
           <TestResultLine
@@ -217,11 +256,19 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
         onSelect={(path) => {
           if (pickerField) {
             setForm((f) => ({ ...f, ssl: { ...f.ssl, [pickerField]: path } }));
+          } else {
+            setForm((f) => ({ ...f, ssh: { ...f.ssh, keyPath: path } }));
           }
           setPickerOpen(false);
           setPickerField(null);
         }}
         filter={(name) => !pickerField || name.includes(".") || name.length > 0}
+      />
+      <HostKeyDialog
+        open={hostKeyPrompt !== null}
+        prompt={hostKeyPrompt}
+        onTrust={() => void trustHostKey()}
+        onCancel={() => setHostKeyPrompt(null)}
       />
     </div>
   );

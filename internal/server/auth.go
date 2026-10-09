@@ -93,7 +93,7 @@ func (g *Guard) CSRF(r *http.Request) string {
 }
 
 // RegisterRoutes mounts bootstrap handlers on mux (inside Guard.Wrap).
-func (g *Guard) RegisterRoutes(mux *http.ServeMux, version string, events http.Handler, settings http.Handler, secrets http.Handler, connections http.Handler, connectionTest http.Handler, connectionParse http.Handler, fs http.Handler, helloSettings api.SettingsSnapshot) {
+func (g *Guard) RegisterRoutes(mux *http.ServeMux, version string, events http.Handler, settings http.Handler, secrets http.Handler, connections http.Handler, connectionTest http.Handler, connectionParse http.Handler, hostKeyAccept http.Handler, sessions http.Handler, fs http.Handler, helloSettings api.SettingsSnapshot) {
 	mux.HandleFunc("/auth/exchange", g.handleExchange)
 	mux.Handle("/api/v1/hello", api.HelloHandler(version, g.CSRF, helloSettings))
 	if events != nil {
@@ -115,6 +115,13 @@ func (g *Guard) RegisterRoutes(mux *http.ServeMux, version string, events http.H
 	}
 	if connectionParse != nil {
 		mux.Handle("/api/v1/connections/parse-url", connectionParse)
+	}
+	if hostKeyAccept != nil {
+		mux.Handle("/api/v1/hostkeys/accept", hostKeyAccept)
+	}
+	if sessions != nil {
+		mux.Handle("/api/v1/sessions/", sessions)
+		mux.Handle("/api/v1/sessions", sessions)
 	}
 	if fs != nil {
 		mux.Handle("/api/v1/fs/list", fs)

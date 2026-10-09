@@ -7,6 +7,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net"
 	"reflect"
 	"strings"
 	"sync/atomic"
@@ -18,6 +19,7 @@ import (
 )
 
 var mysqlTLSReg atomic.Uint64
+var mysqlNetReg atomic.Uint64
 
 // Driver connects to MySQL/MariaDB over TCP.
 type Driver struct{}
@@ -107,7 +109,22 @@ func buildDSN(p driver.ConnectParams, useTLS bool) (string, error) {
 		}
 		cfg.TLSConfig = name
 	}
+	if p.DialContext != nil {
+		name, err := registerMySQLNet(p.DialContext)
+		if err != nil {
+			return "", err
+		}
+		cfg.Net = name
+	}
 	return cfg.FormatDSN(), nil
+}
+
+func registerMySQLNet(dial func(context.Context, string, string) (net.Conn, error)) (string, error) {
+	name := fmt.Sprintf("wisp-net-%d", mysqlNetReg.Add(1))
+	mysqldriver.RegisterDialContext(name, func(ctx context.Context, addr string) (net.Conn, error) {
+		return dial(ctx, "tcp", addr)
+	})
+	return name, nil
 }
 
 func registerMySQLTLS(p driver.TLSParams) (string, error) {

@@ -110,7 +110,7 @@ func TestPostgresTLSProfileViaSession(t *testing.T) {
 			CAFile:   filepath.Join(dir, "ca.pem"),
 		},
 	}
-	conn, _, info, err := session.TestConnect(t.Context(), prof, []byte(envOr("WISP_PG_PASSWORD", "wisp")))
+	conn, _, info, err := session.TestConnect(t.Context(), prof, []byte(envOr("WISP_PG_PASSWORD", "wisp")), session.SSHConnectSecrets{})
 	if err != nil {
 		t.Skipf("postgres-tls not available: %v", err)
 	}

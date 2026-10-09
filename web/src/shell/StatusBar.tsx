@@ -1,5 +1,13 @@
 import { useEffect } from "preact/hooks";
-import { goMemoryMB, latencyMs, readOnly, serverVersion, shellConnection, tabMemoryMB } from "../state";
+import {
+  goMemoryMB,
+  latencyMs,
+  readOnly,
+  serverVersion,
+  sessionState,
+  shellConnection,
+  tabMemoryMB,
+} from "../state";
 import { MemoryMeter } from "./MemoryMeter";
 
 const envDotClass = {
@@ -36,6 +44,9 @@ export function StatusBar() {
           class={`inline-block h-2 w-2 rounded-full ${env ? envDotClass[env] : "bg-line"}`}
           aria-hidden
         />
+        {sessionState.value === "reconnecting" ? (
+          <span class="text-env-staging">Reconnecting…</span>
+        ) : null}
         {readOnly.value ? <span>Read-only</span> : null}
         <span>v{serverVersion.value}</span>
         {latencyMs.value !== null ? <span>{latencyMs.value} ms</span> : null}

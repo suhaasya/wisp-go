@@ -1,4 +1,5 @@
 import { applySettings, type WispSettings } from "./settings";
+import { handleSessionSSE } from "./session-workspace";
 import { goMemoryMB, wispStopped } from "./state";
 
 const maxBackoffMs = 20_000;
@@ -48,6 +49,11 @@ function handleMessage(raw: string): void {
     case "shutdown":
       wispStopped.value = true;
       disconnectEvents();
+      break;
+    case "session":
+      if (parsed.data && typeof parsed.data === "object") {
+        handleSessionSSE(parsed.data as { sid?: string; state?: string });
+      }
       break;
     default:
       break;

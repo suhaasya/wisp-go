@@ -5,21 +5,31 @@ import {
   settings,
 } from "./state";
 
+export type HostKeyErrorBody = {
+  host: string;
+  port: number;
+  key_type: string;
+  fingerprint: string;
+};
+
 export type ApiErrorBody = {
   code: string;
   message: string;
   detail?: string;
+  host_key?: HostKeyErrorBody;
 };
 
 export class ApiError extends Error {
   code: string;
   detail?: string;
+  hostKey?: HostKeyErrorBody;
 
   constructor(body: ApiErrorBody) {
     super(body.message);
     this.name = "ApiError";
     this.code = body.code;
     this.detail = body.detail;
+    this.hostKey = body.host_key;
   }
 }
 
@@ -82,9 +92,15 @@ export async function request<T>(
   if (!res.ok) {
     const text = await res.text();
     try {
-      const parsed = JSON.parse(text) as { error?: ApiErrorBody };
+      const parsed = JSON.parse(text) as { error?: ApiErrorBody & { host_key?: HostKeyErrorBody } };
       if (parsed.error) {
-        throw new ApiError(parsed.error);
+        const e = parsed.error;
+        throw new ApiError({
+          code: e.code,
+          message: e.message,
+          detail: e.detail,
+          host_key: e.host_key,
+        });
       }
     } catch (e) {
       if (e instanceof ApiError) {

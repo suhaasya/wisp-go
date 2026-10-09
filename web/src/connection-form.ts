@@ -1,7 +1,8 @@
 import type { ConnectionProfile, ProfileEnv } from "./connections";
 import { defaultSSLForHost, type SSLFormState } from "./connection-form/ssl-helpers";
+import { defaultSSHForm, type SSHFormState } from "./connection-form/ssh-helpers";
 
-export type { SSLFormState };
+export type { SSLFormState, SSHFormState };
 
 export type FormState = {
   id?: string;
@@ -21,6 +22,7 @@ export type FormState = {
   readOnly: boolean;
   safeMode: boolean;
   ssl: SSLFormState;
+  ssh: SSHFormState;
   advanced: {
     defaultSchema: string;
     timeZone: string;
@@ -56,6 +58,7 @@ export function defaultFormState(): FormState {
     readOnly: false,
     safeMode: false,
     ssl: defaultSSLForHost("127.0.0.1"),
+    ssh: defaultSSHForm(),
     advanced: {
       defaultSchema: "",
       timeZone: "",
@@ -95,6 +98,7 @@ export function formFromParseResult(profile: Record<string, unknown>, password: 
 		env: (profile.env as ProfileEnv) ?? "development",
 		readOnly: Boolean(profile.read_only),
 		safeMode: Boolean(profile.safe_mode),
+		ssh: defaultSSHForm(),
 		ssl: {
 			mode: sslRaw.mode || sslDefaults.mode,
 			caSource: (sslRaw.ca_source as SSLFormState["caSource"]) || sslDefaults.caSource,
@@ -131,6 +135,7 @@ export function formFromProfile(p: ConnectionProfile): FormState {
     readOnly: p.read_only,
     safeMode: p.safe_mode,
     ssl: sslFromProfile(p),
+    ssh: sshFromProfile(p),
     advanced: {
       defaultSchema: p.advanced?.default_schema ?? "",
       timeZone: p.advanced?.time_zone ?? "",
@@ -190,8 +195,17 @@ export function buildTestRequest(f: FormState, hasStoredPassword: boolean): Test
     options: {},
     advanced: buildAdvancedPayload(f),
   };
+  if (f.ssh.enabled) {
+    body.ssh = buildSSHPayload(f.ssh);
+  }
   if (f.passwordDirty || (!f.id && f.password) || (f.id && !hasStoredPassword && f.password)) {
     body.password = f.password;
+  }
+  if (f.ssh.passphraseDirty && f.ssh.passphrase) {
+    body.ssh_passphrase = f.ssh.passphrase;
+  }
+  if (f.ssh.passwordDirty && f.ssh.password) {
+    body.ssh_password = f.ssh.password;
   }
   return body;
 }
@@ -211,6 +225,59 @@ function sslFromProfile(p: ConnectionProfile): SSLFormState {
     clientCert: p.ssl.client_cert ?? "",
     clientKey: p.ssl.client_key ?? "",
   };
+}
+
+function sshFromProfile(p: ConnectionProfile): SSHFormState {
+  const base = defaultSSHForm();
+  if (!p.ssh) {
+    return base;
+  }
+  return {
+    enabled: Boolean(p.ssh.enabled) || Boolean(p.ssh.host),
+    host: p.ssh.host ?? "",
+    port: p.ssh.port || 22,
+    user: p.ssh.user ?? "",
+    auth: p.ssh.auth || "key",
+    keyPath: p.ssh.key_path ?? "",
+    configHost: p.ssh.config_host ?? "",
+    passphrase: "",
+    passphraseDirty: false,
+    password: "",
+    passwordDirty: false,
+    jumps: (p.ssh.jumps ?? []).map((j) => ({
+      host: j.host,
+      port: j.port || 22,
+      user: j.user,
+      auth: j.auth || "key",
+      keyPath: j.key_path ?? "",
+      configHost: j.config_host ?? "",
+    })),
+  };
+}
+
+function buildSSHPayload(ssh: SSHFormState): Record<string, unknown> {
+  const out: Record<string, unknown> = {
+    enabled: true,
+    host: ssh.host,
+    port: ssh.port || 22,
+    user: ssh.user,
+    auth: ssh.auth,
+    key_path: ssh.keyPath,
+  };
+  if (ssh.configHost.trim()) {
+    out.config_host = ssh.configHost.trim();
+  }
+  if (ssh.jumps.length > 0) {
+    out.jumps = ssh.jumps.map((j) => ({
+      host: j.host,
+      port: j.port || 22,
+      user: j.user,
+      auth: j.auth,
+      key_path: j.keyPath,
+      config_host: j.configHost || undefined,
+    }));
+  }
+  return out;
 }
 
 function buildSSLPayload(ssl: SSLFormState): Record<string, string> {

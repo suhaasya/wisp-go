@@ -10,8 +10,14 @@ import (
 	"github.com/suhaasya/wisp-go/internal/store"
 )
 
+// SSHConnectSecrets holds optional SSH credentials for a test connect.
+type SSHConnectSecrets struct {
+	Password   []byte
+	Passphrase []byte
+}
+
 // TestConnect opens a connection from a profile draft and pings the server.
-func TestConnect(ctx context.Context, p store.Profile, password []byte) (driver.Conn, time.Duration, driver.ServerInfo, error) {
+func TestConnect(ctx context.Context, p store.Profile, password []byte, sshSec SSHConnectSecrets) (driver.Conn, time.Duration, driver.ServerInfo, error) {
 	params := driver.ConnectParams{
 		Host:                    p.Transport.Host,
 		Port:                    p.Transport.Port,
@@ -25,6 +31,11 @@ func TestConnect(ctx context.Context, p store.Profile, password []byte) (driver.
 	if p.Advanced.StatementTimeoutSec > 0 {
 		params.StatementTimeout = time.Duration(p.Advanced.StatementTimeoutSec) * time.Second
 	}
+	sshRelease, err := applySSHToParams(ctx, &params, p, sshSecrets{password: sshSec.Password, passphrase: sshSec.Passphrase})
+	if err != nil {
+		return nil, 0, driver.ServerInfo{}, err
+	}
+	defer sshRelease()
 	var d driver.Driver
 	switch p.Engine {
 	case "postgres":
@@ -48,6 +59,7 @@ func TestConnect(ctx context.Context, p store.Profile, password []byte) (driver.
 		_ = conn.Close()
 		return nil, 0, driver.ServerInfo{}, err
 	}
+	info.ViaSSH = params.ViaSSH
 	return conn, ping, info, nil
 }
 

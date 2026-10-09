@@ -11,7 +11,7 @@ export type ToastItem = {
 
 export type ThemePreference = "light" | "dark" | "system";
 
-export type SessionState = "disconnected" | "connecting" | "connected" | "error";
+export type SessionState = "disconnected" | "connecting" | "connected" | "reconnecting" | "error";
 
 export type ShellConnection = {
   name: string;

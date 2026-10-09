@@ -20,6 +20,7 @@ type ImportViolation struct {
 // packages it may import directly (AGENTS.md section 2).
 var allowedInternalDeps = map[string][]string{
 	modulePath + "/internal/transport":       {},
+	modulePath + "/internal/transport/ssh":   {},
 	modulePath + "/internal/driver":          {modulePath + "/internal/transport"},
 	modulePath + "/internal/driver/postgres": {modulePath + "/internal/driver"},
 	modulePath + "/internal/driver/mysql":    {modulePath + "/internal/driver"},
@@ -31,6 +32,7 @@ var allowedInternalDeps = map[string][]string{
 		modulePath + "/internal/pager",
 		modulePath + "/internal/sqlgen",
 		modulePath + "/internal/store",
+		modulePath + "/internal/transport/ssh",
 		modulePath + "/internal/driver",
 		modulePath + "/internal/driver/postgres",
 		modulePath + "/internal/driver/mysql",

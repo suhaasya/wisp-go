@@ -19,6 +19,8 @@ func (Driver) Name() string { return "mock" }
 type Config struct {
 	TotalRows int
 	Columns   []driver.ColumnMeta
+	ExecLog   *[]string
+	PingFail  func() bool
 }
 
 // Open returns a connection that serves Config rows.
@@ -44,6 +46,9 @@ func (c *conn) Ping(ctx context.Context) (time.Duration, error) {
 	if err := ctx.Err(); err != nil {
 		return 0, err
 	}
+	if c.cfg.PingFail != nil && c.cfg.PingFail() {
+		return 0, errors.New("mock: ping failed")
+	}
 	return time.Millisecond, nil
 }
 
@@ -58,7 +63,10 @@ func (c *conn) Exec(ctx context.Context, sql string, args ...any) (driver.ExecRe
 	if err := ctx.Err(); err != nil {
 		return driver.ExecResult{}, err
 	}
-	return driver.ExecResult{}, errors.New("mock: Exec not implemented")
+	if c.cfg.ExecLog != nil {
+		*c.cfg.ExecLog = append(*c.cfg.ExecLog, sql)
+	}
+	return driver.ExecResult{}, nil
 }
 
 func (c *conn) Query(ctx context.Context, sql string, args ...any) (driver.Rows, error) {

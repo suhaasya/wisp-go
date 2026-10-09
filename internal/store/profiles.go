@@ -59,12 +59,26 @@ type SSLConfig struct {
 	ClientKey  string `json:"client_key,omitempty"`
 }
 
+// SSHJump is one hop in a ProxyJump chain configured in the UI.
+type SSHJump struct {
+	Host       string `json:"host"`
+	Port       int    `json:"port"`
+	User       string `json:"user"`
+	Auth       string `json:"auth,omitempty"`
+	KeyPath    string `json:"key_path,omitempty"`
+	ConfigHost string `json:"config_host,omitempty"`
+}
+
 // SSHConfig holds SSH tunnel options (no secrets in profile JSON).
 type SSHConfig struct {
-	Host    string `json:"host"`
-	Port    int    `json:"port"`
-	User    string `json:"user"`
-	KeyPath string `json:"key_path"`
+	Enabled    bool      `json:"enabled,omitempty"`
+	Host       string    `json:"host"`
+	Port       int       `json:"port"`
+	User       string    `json:"user"`
+	Auth       string    `json:"auth,omitempty"`
+	KeyPath    string    `json:"key_path"`
+	ConfigHost string    `json:"config_host,omitempty"`
+	Jumps      []SSHJump `json:"jumps,omitempty"`
 }
 
 // ConnOptions holds driver-specific connection flags.

@@ -25,8 +25,10 @@ func NewConnectionTestHandler(secrets store.Secrets) *ConnectionTestHandler {
 }
 
 type connectionTestRequest struct {
-	ProfileID string  `json:"profile_id"`
-	Password  *string `json:"password"`
+	ProfileID     string  `json:"profile_id"`
+	Password      *string `json:"password"`
+	SSHPassword   *string `json:"ssh_password"`
+	SSHPassphrase *string `json:"ssh_passphrase"`
 	store.Profile
 }
 
@@ -62,8 +64,17 @@ func (h *ConnectionTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 	start := time.Now()
-	conn, ping, info, err := session.TestConnect(ctx, req.Profile, pw)
+	sshSec, err := h.resolveSSHSecrets(req)
 	if err != nil {
+		writeError(w, http.StatusBadRequest, "secrets", err.Error(), "")
+		return
+	}
+	conn, ping, info, err := session.TestConnect(ctx, req.Profile, pw, sshSec)
+	if err != nil {
+		if prompt, ok := session.HostKeyPromptFrom(err); ok {
+			writeHostKeyNeeded(w, prompt)
+			return
+		}
 		ce := session.MapConnectionError(err)
 		writeError(w, http.StatusBadGateway, ce.Code, ce.Message, ce.Detail)
 		return
@@ -85,7 +96,35 @@ func (h *ConnectionTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		LatencyMS: latency,
 		Server:    label,
 		TLS:       strings.TrimSpace(info.TLS),
+		ViaSSH:    info.ViaSSH,
 	})
+}
+
+func (h *ConnectionTestHandler) resolveSSHSecrets(req connectionTestRequest) (session.SSHConnectSecrets, error) {
+	out := session.SSHConnectSecrets{}
+	if req.SSHPassword != nil {
+		out.Password = []byte(*req.SSHPassword)
+	} else if req.ProfileID != "" && h.secrets != nil {
+		b, ok, err := h.secrets.Get(req.ProfileID, store.SecretKindSSHPassword)
+		if err != nil {
+			return out, err
+		}
+		if ok {
+			out.Password = b
+		}
+	}
+	if req.SSHPassphrase != nil {
+		out.Passphrase = []byte(*req.SSHPassphrase)
+	} else if req.ProfileID != "" && h.secrets != nil {
+		b, ok, err := h.secrets.Get(req.ProfileID, store.SecretKindSSHPassphrase)
+		if err != nil {
+			return out, err
+		}
+		if ok {
+			out.Passphrase = b
+		}
+	}
+	return out, nil
 }
 
 func (h *ConnectionTestHandler) resolvePassword(req connectionTestRequest) ([]byte, error) {

@@ -20,7 +20,23 @@ export type ConnectionProfile = {
     client_cert?: string;
     client_key?: string;
   };
-  ssh?: { host: string; port: number; user: string; key_path: string };
+  ssh?: {
+    enabled?: boolean;
+    host: string;
+    port: number;
+    user: string;
+    auth?: string;
+    key_path: string;
+    config_host?: string;
+    jumps?: {
+      host: string;
+      port: number;
+      user: string;
+      auth?: string;
+      key_path?: string;
+      config_host?: string;
+    }[];
+  };
   env: ProfileEnv;
   read_only: boolean;
   safe_mode: boolean;
@@ -249,11 +265,12 @@ export function formatLastUsed(iso: string | null | undefined, nowMs = Date.now(
   return `${day} days ago`;
 }
 
-/** Mock session open until LW-021 POST /sessions exists. */
 export async function connectProfile(profileId: string): Promise<string> {
-  const sid = `mock-${profileId}`;
-  await Promise.resolve();
-  return sid;
+  if (useMockConnectionData()) {
+    return `mock-${profileId}`;
+  }
+  const out = await request<{ sid: string }>("POST", "/api/v1/sessions", { profile_id: profileId });
+  return out.sid;
 }
 
 export async function openWorkspaceSession(profileId: string): Promise<void> {

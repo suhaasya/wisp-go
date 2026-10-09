@@ -2,6 +2,7 @@ package driver
 
 import (
 	"context"
+	"net"
 	"time"
 
 	"github.com/suhaasya/wisp-go/internal/transport"
@@ -54,6 +55,9 @@ type ConnectParams struct {
 	AllowPublicKeyRetrieval bool
 
 	TLS TLSParams
+
+	DialContext func(ctx context.Context, network, address string) (net.Conn, error)
+	ViaSSH      bool
 }
 
 // TLSParams mirrors transport TLS settings on ConnectParams.
@@ -66,6 +70,7 @@ type ServerInfo struct {
 	Database string
 	User     string
 	TLS      string
+	ViaSSH   bool
 }
 
 // ExecResult summarizes a non-query statement.

@@ -90,3 +90,48 @@ export async function closeResult(sessionId: string, rid: string): Promise<void>
     `/api/v1/sessions/${encodeURIComponent(sessionId)}/results/${encodeURIComponent(rid)}`,
   );
 }
+
+export type ChangeOp = "set" | "insert" | "delete" | "revert";
+
+export type ChangeRequest = {
+  op: ChangeOp;
+  row?: unknown[];
+  col?: string;
+  value?: string;
+  null?: boolean;
+  original?: string;
+  origNull?: boolean;
+  default?: boolean;
+};
+
+export type ChangeResponse = {
+  count: number;
+  insertKey?: string;
+};
+
+export async function postResultChange(
+  sessionId: string,
+  rid: string,
+  body: ChangeRequest,
+  signal?: AbortSignal,
+): Promise<ChangeResponse> {
+  return request<ChangeResponse>(
+    "POST",
+    `/api/v1/sessions/${encodeURIComponent(sessionId)}/results/${encodeURIComponent(rid)}/changes`,
+    body,
+    { signal },
+  );
+}
+
+export async function discardResultChanges(
+  sessionId: string,
+  rid: string,
+  signal?: AbortSignal,
+): Promise<ChangeResponse> {
+  return request<ChangeResponse>(
+    "DELETE",
+    `/api/v1/sessions/${encodeURIComponent(sessionId)}/results/${encodeURIComponent(rid)}/changes`,
+    undefined,
+    { signal },
+  );
+}

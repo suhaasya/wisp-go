@@ -101,6 +101,67 @@ func ResetWindow(w *Window, cols []ColumnMeta, rows int) {
 	}
 }
 
+// GrowWindow returns a copy of w with extra empty rows appended.
+func GrowWindow(w *Window, extra int) *Window {
+	if w == nil || extra <= 0 {
+		return CloneWindow(w)
+	}
+	out := NewWindow(w.Columns, w.Rows+extra)
+	if len(w.arena) > 0 {
+		out.arena = append([]byte(nil), w.arena...)
+		copy(out.textOffsets, w.textOffsets[:len(w.textOffsets)])
+	}
+	for ci := range w.cols {
+		src := &w.cols[ci]
+		dst := out.Column(ci)
+		dst.data.nulls = append([]int(nil), src.nulls...)
+		dst.data.truncated = append([]int(nil), src.truncated...)
+		switch src.kind {
+		case colInt:
+			copy(dst.data.ints[:w.Rows], src.ints)
+		case colFloat:
+			copy(dst.data.floats[:w.Rows], src.floats)
+		case colBool:
+			copy(dst.data.bools[:w.Rows], src.bools)
+		case colText:
+			// offsets copied above for first w.Rows text slots
+			if w.Rows > 0 {
+				offSrc := src.offsetOff
+				offDst := dst.data.offsetOff
+				copy(out.textOffsets[offDst:offDst+w.Rows+1], w.textOffsets[offSrc:offSrc+w.Rows+1])
+			}
+		}
+	}
+	return out
+}
+
+// CloneWindow deep-copies a window for overlay application without mutating cache.
+func CloneWindow(w *Window) *Window {
+	if w == nil {
+		return nil
+	}
+	out := NewWindow(w.Columns, w.Rows)
+	if len(w.arena) > 0 {
+		out.arena = append([]byte(nil), w.arena...)
+		copy(out.textOffsets, w.textOffsets)
+	}
+	for ci := range w.cols {
+		src := &w.cols[ci]
+		dst := out.Column(ci)
+		dst.data.nulls = append([]int(nil), src.nulls...)
+		dst.data.truncated = append([]int(nil), src.truncated...)
+		switch src.kind {
+		case colInt:
+			copy(dst.data.ints, src.ints)
+		case colFloat:
+			copy(dst.data.floats, src.floats)
+		case colBool:
+			copy(dst.data.bools, src.bools)
+		}
+	}
+	return out
+}
+
 // NewWindow allocates a window with n rows and column metadata.
 func NewWindow(cols []ColumnMeta, rows int) *Window {
 	w := &Window{Columns: cols, Rows: rows}

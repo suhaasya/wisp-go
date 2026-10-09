@@ -27,6 +27,9 @@ type Session struct {
 	pager     *pager.Manager
 	metaCache *metadataCache
 
+	changeMu      sync.RWMutex
+	resultChanges map[string]*resultChanges
+
 	metaInitMu sync.Mutex
 
 	releaseSSH     func()

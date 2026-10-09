@@ -41,6 +41,11 @@ func (c *windowCache) get(offset, limit int) (*driver.Window, bool) {
 	return w, true
 }
 
+func (c *windowCache) clearAll() {
+	c.order = c.order[:0]
+	c.items = make(map[cacheKey]*driver.Window)
+}
+
 func (c *windowCache) put(offset, limit int, w *driver.Window) {
 	_ = limit
 	k := cacheKey{offset: offset}

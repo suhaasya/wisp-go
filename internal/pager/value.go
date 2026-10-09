@@ -66,19 +66,23 @@ func (m *Manager) CellValue(ctx context.Context, rid string, row int, colName st
 }
 
 func (m *Manager) windowAt(ctx context.Context, r *result, offset, limit int) (*driver.Window, error) {
+	var raw *driver.Window
 	if w, ok := r.cache.get(offset, limit); ok {
-		return w, nil
+		raw = w
+	} else {
+		w, err := r.fetch.Fetch(ctx, offset, limit)
+		if err != nil {
+			return nil, err
+		}
+		if w == nil {
+			w = driver.NewWindow(r.columns, 0)
+		}
+		r.cache.put(offset, limit, w)
+		raw = w
 	}
-	w, err := r.fetch.Fetch(ctx, offset, limit)
-	if err != nil {
-		return nil, err
-	}
-	if w == nil {
-		w = driver.NewWindow(r.columns, 0)
-	}
-	r.cache.put(offset, limit, w)
-	applyOverlay(w, m.overlay(r.id))
-	return w, nil
+	out := driver.CloneWindow(raw)
+	_ = m.overlay(r.id, out, offset)
+	return out, nil
 }
 
 func (m *Manager) fetchFullCellValue(ctx context.Context, r *result, w *driver.Window, localRow int, colName string) (string, error) {

@@ -3,6 +3,7 @@ import {
   goMemoryMB,
   latencyMs,
   readOnly,
+  stagedChangeCount,
   serverVersion,
   sessionState,
   shellConnection,
@@ -51,6 +52,9 @@ export function StatusBar() {
         <span>v{serverVersion.value}</span>
         {latencyMs.value !== null ? <span>{latencyMs.value} ms</span> : null}
       </span>
+      {stagedChangeCount.value > 0 ? (
+        <span class="text-env-staging">{stagedChangeCount.value} staged changes</span>
+      ) : null}
       <span class="flex-1" />
       {goMemoryMB.value !== null ? (
         <MemoryMeter label="Go" mb={goMemoryMB.value} capMB={goCapMB} mono />

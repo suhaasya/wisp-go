@@ -1,5 +1,12 @@
 import { useEffect, useState } from "preact/hooks";
-import type { TableSortKey } from "../state";
+import { readOnly, stagedChangeCount, type TableSortKey } from "../state";
+import { pkRowValues } from "../grid/edit";
+import {
+  discardResultChanges,
+  postResultChange,
+} from "../grid/results-client";
+import { buildColumns } from "../grid/columns";
+import { DataToolbar } from "../workspace/toolbar";
 import { appliedBrowseQuery, browseQueryKey, updateTableTabBrowseQuery } from "../workspace/browse-query";
 import { FilterBar } from "../workspace/filter-bar";
 import {
@@ -32,6 +39,18 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
   const [foreignKeys, setForeignKeys] = useState<
     import("../workspace/fk-jump").ForeignKeyMeta[]
   >([]);
+  const [stagedCount, setStagedCount] = useState(0);
+
+  useEffect(() => {
+    stagedChangeCount.value = stagedCount;
+    return () => {
+      stagedChangeCount.value = 0;
+    };
+  }, [stagedCount]);
+
+  useEffect(() => {
+    setStagedCount(0);
+  }, [open?.rid]);
 
   useEffect(() => {
     setSortDraft(applied.sort);
@@ -88,6 +107,73 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
   }
 
   const detailRow = primaryRow(selection);
+  const editable = primaryKey.length > 0 && !readOnly.value;
+  const gridColumns = buildColumns(open?.columns ?? []);
+
+  async function runChange(body: Parameters<typeof postResultChange>[2]) {
+    if (!open) {
+      return;
+    }
+    const resp = await postResultChange(sessionId, open.rid, body);
+    setStagedCount(resp.count);
+    gridAccess?.invalidateWindows();
+  }
+
+  async function onAddRow() {
+    await runChange({ op: "insert" });
+  }
+
+  async function onDuplicateRow() {
+    const picked =
+      detailRow ?? (selection.kind === "row" ? [...selection.rows][0] : undefined);
+    if (picked === undefined || !open || !gridAccess) {
+      return;
+    }
+    const row = picked;
+    const ins = await postResultChange(sessionId, open.rid, { op: "insert" });
+    const key = ins.insertKey;
+    if (!key) {
+      setStagedCount(ins.count);
+      return;
+    }
+    let count = ins.count;
+    for (let ci = 0; ci < gridColumns.length; ci++) {
+      const col = gridColumns[ci]!;
+      const raw = gridAccess.getCell(row, ci);
+      if (raw === null || raw === undefined) {
+        continue;
+      }
+      const r = await postResultChange(sessionId, open.rid, {
+        op: "set",
+        row: [key],
+        col: col.id,
+        value: String(raw),
+      });
+      count = r.count;
+    }
+    setStagedCount(count);
+    gridAccess.invalidateWindows();
+  }
+
+  async function onDeleteRow() {
+    const picked =
+      detailRow ?? (selection.kind === "row" ? [...selection.rows][0] : undefined);
+    if (picked === undefined || !gridAccess) {
+      return;
+    }
+    const row = picked;
+    const ctx = { primaryKey, columns: gridColumns, getCell: gridAccess.getCell.bind(gridAccess) };
+    await runChange({ op: "delete", row: pkRowValues(ctx, row) });
+  }
+
+  async function onDiscard() {
+    if (!open) {
+      return;
+    }
+    await discardResultChanges(sessionId, open.rid);
+    setStagedCount(0);
+    gridAccess?.invalidateWindows();
+  }
 
   if (!loadResults) {
     return (
@@ -105,6 +191,20 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
   }
   return (
     <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+      {primaryKey.length === 0 ? (
+        <p class="border-b border-line bg-raise px-3 py-2 text-12-5 text-ink-2">
+          Inline editing requires a primary or unique key on this table.
+        </p>
+      ) : null}
+      <DataToolbar
+        stagedCount={stagedCount}
+        disabled={!editable}
+        onAddRow={() => void onAddRow()}
+        onDuplicateRow={() => void onDuplicateRow()}
+        onDeleteRow={() => void onDeleteRow()}
+        onDiscard={() => void onDiscard()}
+        onReviewSQL={() => {}}
+      />
       <FilterBar
         columns={open.columns}
         applied={applied}
@@ -126,6 +226,9 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
           onSelectionChange={setSelection}
           onGridReady={setGridAccess}
           onToggleDetail={() => setDetailOpen((v) => !v)}
+          editable={editable}
+          primaryKey={primaryKey}
+          onStagedCount={setStagedCount}
         />
         <DetailPanel
           open={detailOpen}
@@ -141,6 +244,29 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
           foreignKeys={foreignKeys}
           getCell={(row, col) => gridAccess?.getCell(row, col) ?? null}
           isTruncated={(row, col) => gridAccess?.isTruncated(row, col) ?? false}
+          editable={editable}
+          onCellCommit={async (colIndex, colName, next) => {
+            if (!open || !gridAccess || detailRow === null) {
+              return;
+            }
+            const raw = gridAccess.getCell(detailRow, colIndex);
+            const orig =
+              raw === null || raw === undefined
+                ? { origNull: true }
+                : { original: String(raw) };
+            const resp = await postResultChange(sessionId, open.rid, {
+              op: "set",
+              row: pkRowValues(
+                { primaryKey, columns: gridColumns, getCell: gridAccess.getCell.bind(gridAccess) },
+                detailRow,
+              ),
+              col: colName,
+              ...orig,
+              ...next,
+            });
+            setStagedCount(resp.count);
+            gridAccess.invalidateWindows();
+          }}
         />
       </div>
     </div>

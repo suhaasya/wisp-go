@@ -1,3 +1,4 @@
+import { overlayAt, type CellOverlayKind } from "./overlay";
 import { DEFAULT_WINDOW_ROWS, windowOffsetForRow, type WindowPayload } from "./window";
 
 export type FetchWindowFn = (offset: number, signal: AbortSignal) => Promise<WindowPayload>;
@@ -71,6 +72,8 @@ export type WindowBuffer = {
   isRowLoaded: (row: number) => boolean;
   cachedOffsets: () => number[];
   lastFetchTime: () => Date | null;
+  overlayKind: (row: number, col: number) => CellOverlayKind | null;
+  invalidateAll: () => void;
   destroy: () => void;
 };
 
@@ -179,6 +182,23 @@ export function createWindowBuffer(opts: WindowBufferOptions): WindowBuffer {
     return w.truncated?.[col]?.includes(idx) ?? false;
   }
 
+  function overlayKind(row: number, col: number): CellOverlayKind | null {
+    const w = windowForRow(row);
+    if (!w) {
+      return null;
+    }
+    return overlayAt(w, row - w.offset, col);
+  }
+
+  function invalidateAll(): void {
+    for (const { ac } of inflight.values()) {
+      ac.abort();
+    }
+    inflight.clear();
+    cache.clear();
+    opts.onUpdate?.();
+  }
+
   function cellValue(row: number, col: number): unknown | undefined {
     const w = windowForRow(row);
     if (!w) {
@@ -203,6 +223,8 @@ export function createWindowBuffer(opts: WindowBufferOptions): WindowBuffer {
     isRowLoaded,
     cachedOffsets: () => [...cache.keys()],
     lastFetchTime: () => lastFetch,
+    overlayKind,
+    invalidateAll,
     destroy: () => {
       destroyed = true;
       for (const { ac } of inflight.values()) {

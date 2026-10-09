@@ -6,7 +6,9 @@ import { buildColumns, clampColumnWidth, type GridColumn } from "./columns";
 import { copySelection, formatSelectionSync, type CopyFormat } from "./copy";
 import { createGridHeader } from "./header";
 import { createRowPool, type RowPool } from "./pool";
-import { fetchResultWindow } from "./results-client";
+import { openCellEditor, revertCell, setCellDefault, setCellNull, type EditContext } from "./edit";
+import { Menu } from "../ui/Menu";
+import { fetchResultWindow, postResultChange } from "./results-client";
 import {
   emptySelection,
   extendCellSelection,
@@ -18,6 +20,7 @@ import {
 export type GridCellAccess = {
   getCell: (row: number, col: number) => unknown;
   isTruncated: (row: number, col: number) => boolean;
+  invalidateWindows: () => void;
 };
 import type { TableSortKey } from "../state";
 import { toggleSortDraft } from "../workspace/sort-draft";
@@ -38,6 +41,9 @@ export type GridProps = {
   onGridReady?: (access: GridCellAccess) => void;
   onToggleDetail?: () => void;
   fetchWindow?: (offset: number, signal: AbortSignal) => Promise<WindowPayload>;
+  editable?: boolean;
+  primaryKey?: string[];
+  onStagedCount?: (count: number) => void;
 };
 
 function rowHeightFromSettings(): number {
@@ -56,9 +62,13 @@ export function Grid(props: GridProps) {
   const selection = useSignal<SelectionState>(emptySelection());
   const statusRows = useSignal({ first: 0, last: 0 });
   const lastFetch = useSignal<string>("—");
+  const cellMenu = useSignal<{ x: number; y: number; row: number; col: number } | null>(null);
+  const menuIndex = useSignal(0);
   const totalRows = props.total.value;
 
   const headerApiRef = useRef<ReturnType<typeof createGridHeader> | null>(null);
+  const bufferRef = useRef<ReturnType<typeof createWindowBuffer> | null>(null);
+  const poolRef = useRef<RowPool | null>(null);
 
   useEffect(() => {
     headerApiRef.current?.setSortDraft(props.sortDraft ?? []);
@@ -77,6 +87,7 @@ export function Grid(props: GridProps) {
     const tableName = `${props.schema}.${props.table}`;
 
     let pool: RowPool | null = null;
+    let editorCleanup: (() => void) | null = null;
 
     const header = createGridHeader(headerMount, columns.value, {
       sortDraft: props.sortDraft ?? [],
@@ -113,7 +124,7 @@ export function Grid(props: GridProps) {
       },
     });
 
-    const buffer = createWindowBuffer({
+    bufferRef.current = createWindowBuffer({
       windowRows: DEFAULT_WINDOW_ROWS,
       maxWindows: 3,
       onUpdate: () => pool?.scheduleLayout(),
@@ -124,10 +135,55 @@ export function Grid(props: GridProps) {
         return fetchResultWindow(props.sessionId, props.rid, offset, DEFAULT_WINDOW_ROWS, signal);
       },
     });
+    const buffer = bufferRef.current;
+
+    const editCtx = (): EditContext | null => {
+      if (!props.editable || !props.primaryKey?.length) {
+        return null;
+      }
+      return {
+        sessionId: props.sessionId,
+        rid: props.rid,
+        primaryKey: props.primaryKey,
+        columns: columns.value,
+        getCell: (row, col) => buffer.cellValue(row, col),
+        postChange: (body) => postResultChange(props.sessionId, props.rid, body),
+        onStagedCount: (n) => props.onStagedCount?.(n),
+        invalidateWindows: () => {
+          buffer.invalidateAll();
+          pool?.scheduleLayout();
+        },
+      };
+    };
+
+    const openEditor = (row: number, col: number, cellEl: HTMLDivElement) => {
+      const ctx = editCtx();
+      if (!ctx) {
+        return;
+      }
+      editorCleanup?.();
+      const onTab = () => {
+        const nextCol = col + 1;
+        if (nextCol >= columns.value.length) {
+          return;
+        }
+        selection.value = selectCell(row, nextCol);
+        props.onSelectionChange?.(selection.value);
+        requestAnimationFrame(() => {
+          const nextEl = scrollEl.querySelector(
+            `[data-row="${row}"] [data-col-index="${nextCol}"]`,
+          ) as HTMLDivElement | null;
+          if (nextEl) {
+            openEditor(row, nextCol, nextEl);
+          }
+        });
+      };
+      editorCleanup = openCellEditor(ctx, row, col, cellEl, undefined, onTab);
+    };
 
     headerApiRef.current = header;
 
-    pool = createRowPool({
+    poolRef.current = pool = createRowPool({
       scrollEl,
       headerEl: headerMount,
       bodyEl: bodyMount,
@@ -151,11 +207,17 @@ export function Grid(props: GridProps) {
         props.onSelectionChange?.(selection.value);
         pool?.scheduleLayout();
       },
+      overlayKind: (row, col) => buffer.overlayKind(row, col),
+      onCellActivate: (row, col, cellEl) => openEditor(row, col, cellEl),
     });
 
     props.onGridReady?.({
       getCell: (row, col) => buffer.cellValue(row, col),
       isTruncated: (row, col) => buffer.isTruncated(row, col),
+      invalidateWindows: () => {
+        buffer.invalidateAll();
+        pool?.scheduleLayout();
+      },
     });
 
     const onScroll = () => {
@@ -187,6 +249,16 @@ export function Grid(props: GridProps) {
         props.onToggleDetail?.();
         return;
       }
+      if (e.key === "Enter" && props.editable && selection.value.kind === "cell") {
+        const { row, col } = selection.value.focus;
+        const cellEl = scrollEl.querySelector(
+          `[data-row="${row}"] [data-col-index="${col}"]`,
+        ) as HTMLDivElement | null;
+        if (cellEl) {
+          openEditor(row, col, cellEl);
+          e.preventDefault();
+        }
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === "c") {
         const getCell = (row: number, colIndex: number) => {
           const v = buffer.cellValue(row, colIndex);
@@ -201,9 +273,35 @@ export function Grid(props: GridProps) {
     };
     hostRef.current?.addEventListener("keydown", onKeyDown);
 
+    const onContextMenu = (e: MouseEvent) => {
+      if (!props.editable) {
+        return;
+      }
+      const cell = (e.target as HTMLElement).closest("[data-col-index]");
+      if (!cell) {
+        return;
+      }
+      const rowEl = cell.closest("[data-row]");
+      if (!rowEl) {
+        return;
+      }
+      const row = Number(rowEl.getAttribute("data-row"));
+      const col = Number(cell.getAttribute("data-col-index"));
+      if (Number.isNaN(row) || Number.isNaN(col)) {
+        return;
+      }
+      e.preventDefault();
+      cellMenu.value = { x: e.clientX, y: e.clientY, row, col };
+      menuIndex.value = 0;
+    };
+    hostRef.current?.addEventListener("contextmenu", onContextMenu);
+
     return () => {
       scrollEl.removeEventListener("scroll", onScroll);
       hostRef.current?.removeEventListener("keydown", onKeyDown);
+      hostRef.current?.removeEventListener("contextmenu", onContextMenu);
+      editorCleanup?.();
+      poolRef.current = null;
       pool?.destroy();
       header.destroy();
       headerApiRef.current = null;
@@ -219,6 +317,9 @@ export function Grid(props: GridProps) {
     props.onSelectionChange,
     props.onGridReady,
     props.onToggleDetail,
+    props.editable,
+    props.primaryKey,
+    props.onStagedCount,
   ]);
 
   const totalLabel =
@@ -226,8 +327,55 @@ export function Grid(props: GridProps) {
       ? `~${props.total.value.toLocaleString()}`
       : props.total.value.toLocaleString();
 
+  const menu = cellMenu.value;
+  const menuItems = [
+    { id: "null", label: "Set NULL" },
+    { id: "default", label: "Set DEFAULT" },
+    { id: "revert", label: "Revert" },
+  ];
+
   return (
     <div ref={hostRef} class="flex min-h-0 flex-1 flex-col outline-none" tabIndex={0}>
+      <Menu
+        open={menu !== null}
+        x={menu?.x ?? 0}
+        y={menu?.y ?? 0}
+        items={menuItems}
+        activeIndex={menuIndex.value}
+        onActiveIndexChange={(i) => {
+          menuIndex.value = i;
+        }}
+        onClose={() => {
+          cellMenu.value = null;
+        }}
+        onSelect={(id) => {
+          const m = cellMenu.value;
+          cellMenu.value = null;
+          if (!m) {
+            return;
+          }
+          const ctx = {
+            sessionId: props.sessionId,
+            rid: props.rid,
+            primaryKey: props.primaryKey ?? [],
+            columns: columns.value,
+            getCell: (row, col) => bufferRef.current?.cellValue(row, col),
+            postChange: (body) => postResultChange(props.sessionId, props.rid, body),
+            onStagedCount: (n) => props.onStagedCount?.(n),
+            invalidateWindows: () => {
+              bufferRef.current?.invalidateAll();
+              poolRef.current?.scheduleLayout();
+            },
+          } satisfies EditContext;
+          if (id === "null") {
+            void setCellNull(ctx, m.row, m.col);
+          } else if (id === "default") {
+            void setCellDefault(ctx, m.row, m.col);
+          } else {
+            void revertCell(ctx, m.row, m.col);
+          }
+        }}
+      />
       <div
         ref={scrollRef}
         data-testid="wisp-grid-scroll"

@@ -60,7 +60,13 @@ func (s *Session) OpenResult(ctx context.Context, src pager.Source) (pager.OpenR
 	if p == nil {
 		return pager.OpenResult{}, errSessionNotReady
 	}
-	return p.Open(ctx, src)
+	open, err := p.Open(ctx, src)
+	if err != nil {
+		return pager.OpenResult{}, err
+	}
+	s.registerResultChanges(open.RID, src.KeyColumns)
+	s.wirePagerOverlay()
+	return open, nil
 }
 
 // ResultWindowJSON returns encoded window bytes for a result.
@@ -92,6 +98,7 @@ func (s *Session) ResultCellValue(ctx context.Context, rid string, row int, col 
 
 // CloseResult closes one result.
 func (s *Session) CloseResult(rid string) {
+	s.dropResultChanges(rid)
 	if p := s.ensurePager(); p != nil {
 		p.Close(rid)
 	}

@@ -49,6 +49,12 @@ export type DetailPanelProps = {
   foreignKeys: ForeignKeyMeta[];
   getCell: (row: number, col: number) => unknown;
   isTruncated: (row: number, col: number) => boolean;
+  editable?: boolean;
+  onCellCommit?: (
+    colIndex: number,
+    colName: string,
+    next: { value?: string; null?: boolean; default?: boolean },
+  ) => void | Promise<void>;
 };
 
 export function DetailPanel(props: DetailPanelProps) {
@@ -199,10 +205,29 @@ export function DetailPanel(props: DetailPanelProps) {
               ) : (
                 <Input
                   mono
-                  value={display}
-                  readOnly
+                  value={display === "NULL" && props.editable ? "" : display}
+                  readOnly={!props.editable || props.primaryKey.includes(col.name)}
                   ariaLabel={col.name}
                   onFocus={() => void onFieldFocus(col.name, colIndex)}
+                  onBlur={(e) => {
+                    if (!props.editable || !props.onCellCommit || props.primaryKey.includes(col.name)) {
+                      return;
+                    }
+                    const v = (e.target as HTMLInputElement).value;
+                    const raw = props.getCell(row, colIndex);
+                    const wasNull = raw === null || raw === undefined;
+                    if (v === "" && wasNull) {
+                      return;
+                    }
+                    if (v === "" && !wasNull) {
+                      void props.onCellCommit(colIndex, col.name, { null: true });
+                      return;
+                    }
+                    if (String(raw) === v) {
+                      return;
+                    }
+                    void props.onCellCommit(colIndex, col.name, { value: v });
+                  }}
                 />
               )}
               {jump ? (

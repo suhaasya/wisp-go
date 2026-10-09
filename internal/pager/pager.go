@@ -60,7 +60,7 @@ type Manager struct {
 	mockTotal int
 	clock     func() time.Time
 	newID     func() string
-	overlay   func(rid string) Overlay
+	overlay   func(rid string, w *driver.Window, offset int) Overlay
 }
 
 // NewManager returns a pager for session main conn.
@@ -74,7 +74,7 @@ func NewManager(conn driver.Conn, engine string, clock func() time.Time) *Manage
 		engine:  engine,
 		clock:   clock,
 		newID:   newResultID,
-		overlay: func(string) Overlay { return Overlay{} },
+		overlay: func(string, *driver.Window, int) Overlay { return Overlay{} },
 	}
 }
 
@@ -84,10 +84,19 @@ func (m *Manager) SetMockTotal(n int) {
 }
 
 // SetOverlayProvider sets staged-edit overlay lookup (LW-029).
-func (m *Manager) SetOverlayProvider(fn func(rid string) Overlay) {
+func (m *Manager) SetOverlayProvider(fn func(rid string, w *driver.Window, offset int) Overlay) {
 	if fn != nil {
 		m.overlay = fn
 	}
+}
+
+// InvalidateWindows drops cached windows for a result after staged edits change.
+func (m *Manager) InvalidateWindows(rid string) {
+	m.mu.Lock()
+	if r, ok := m.results[rid]; ok {
+		r.cache.clearAll()
+	}
+	m.mu.Unlock()
 }
 
 // CachedWindowCount returns cached windows for a result (tests).
@@ -145,7 +154,7 @@ func (m *Manager) WindowJSON(ctx context.Context, rid string, offset, limit int)
 	m.mu.Unlock()
 
 	if w, ok := r.cache.get(offset, limit); ok {
-		return buildWindowJSON(r.id, offset, r.total, w, m.overlay(r.id))
+		return m.encodeWindow(r.id, offset, r.total, w, m.overlay)
 	}
 	w, err := r.fetch.Fetch(ctx, offset, limit)
 	if err != nil {
@@ -155,8 +164,13 @@ func (m *Manager) WindowJSON(ctx context.Context, rid string, offset, limit int)
 		w = driver.NewWindow(r.columns, 0)
 	}
 	r.cache.put(offset, limit, w)
-	applyOverlay(w, m.overlay(r.id))
-	return buildWindowJSON(r.id, offset, r.total, w, m.overlay(r.id))
+	return m.encodeWindow(r.id, offset, r.total, w, m.overlay)
+}
+
+func (m *Manager) encodeWindow(rid string, offset int, total Total, raw *driver.Window, overlayFn func(string, *driver.Window, int) Overlay) ([]byte, error) {
+	w := driver.CloneWindow(raw)
+	ov := overlayFn(rid, w, offset)
+	return buildWindowJSON(rid, offset, total, w, ov)
 }
 
 // Close removes one result.

@@ -23,7 +23,9 @@ export type RowPoolOptions = {
   getSelection: () => SelectionState;
   onCellClick: (row: number, col: number, extend: boolean) => void;
   onRowClick: (row: number, extend: boolean) => void;
+  onCellActivate?: (row: number, col: number, cellEl: HTMLDivElement) => void;
   onHorizontalScroll?: (scrollLeft: number, viewportWidth: number) => void;
+  overlayKind?: (row: number, col: number) => import("./overlay").CellOverlayKind | null;
 };
 
 export type RowPool = {
@@ -72,6 +74,25 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
         }
       }
     };
+    rowEl.ondblclick = (e) => {
+      const cell = (e.target as HTMLElement).closest("[data-col-index]");
+      if (!cell || !opts.onCellActivate) {
+        return;
+      }
+      const rowIndex = Number(rowEl.dataset.row);
+      const colIndex = Number(cell.getAttribute("data-col-index"));
+      if (Number.isNaN(rowIndex) || Number.isNaN(colIndex)) {
+        return;
+      }
+      opts.onCellActivate(rowIndex, colIndex, cell as HTMLDivElement);
+    };
+  }
+
+  function applyOverlayCellClass(cell: HTMLDivElement, row: number, colIndex: number): void {
+    cell.classList.remove("grid-cell-mod");
+    if (opts.overlayKind?.(row, colIndex) === "mod") {
+      cell.classList.add("grid-cell-mod");
+    }
   }
 
   function rebuildRowStructure(
@@ -109,6 +130,7 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
       if (cellInSelection(sel, rowIndex, colIndex)) {
         cell.classList.add("bg-accent-soft");
       }
+      applyOverlayCellClass(cell, rowIndex, colIndex);
       renderCell(cell, rowIndex, colIndex, col);
       rowEl.appendChild(cell);
     }
@@ -134,6 +156,7 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
         continue;
       }
       cell.classList.toggle("bg-accent-soft", cellInSelection(sel, rowIndex, colIndex));
+      applyOverlayCellClass(cell, rowIndex, colIndex);
       renderCell(cell, rowIndex, colIndex, col);
     }
   }
@@ -164,6 +187,20 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
     return w.truncated[col]?.includes(idx) ?? false;
   }
 
+  function rowOverlayRowKind(row: number): "del" | "ins" | null {
+    if (!opts.overlayKind) {
+      return null;
+    }
+    const k = opts.overlayKind(row, 0);
+    if (k === "del") {
+      return "del";
+    }
+    if (k === "ins") {
+      return "ins";
+    }
+    return null;
+  }
+
   function renderCell(
     cell: HTMLDivElement,
     row: number,
@@ -172,7 +209,7 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
   ): void {
     cell.replaceChildren();
     cell.className =
-      "shrink-0 overflow-hidden text-ellipsis whitespace-nowrap border-r border-line-2 px-2.5 font-mono text-12-5 text-ink";
+      "grid-cell shrink-0 overflow-hidden text-ellipsis whitespace-nowrap border-r border-line-2 px-2.5 font-mono text-12-5 text-ink";
     cell.style.width = `${col.width}px`;
     cell.style.minWidth = `${col.width}px`;
     if (isNumericType(col.meta.type)) {
@@ -262,9 +299,16 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
       rowEl.dataset.row = String(rowIndex);
 
       const selected = rowIsSelected(sel, rowIndex);
-      rowEl.className = selected
+      const rowKind = rowOverlayRowKind(rowIndex);
+      let rowClass = selected
         ? "absolute left-0 flex flex-nowrap border-b border-line-2 bg-accent-soft"
         : "absolute left-0 flex flex-nowrap border-b border-line-2 hover:bg-raise";
+      if (rowKind === "del") {
+        rowClass += " grid-row-del";
+      } else if (rowKind === "ins") {
+        rowClass += " grid-row-ins";
+      }
+      rowEl.className = rowClass;
 
       if (rowEl.dataset.colWinKey !== winKey) {
         rowEl.dataset.colWinKey = winKey;

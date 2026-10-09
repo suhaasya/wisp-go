@@ -69,27 +69,6 @@ func sourceFromDTO(d pagerSourceDTO) pager.Source {
 	}
 }
 
-func (h *SessionsHandler) serveResults(w http.ResponseWriter, r *http.Request, sid, rest string) {
-	switch {
-	case rest == "results" && r.Method == http.MethodPost:
-		h.postResult(w, r, sid)
-	case strings.HasPrefix(rest, "results/") && strings.HasSuffix(rest, "/count") && r.Method == http.MethodPost:
-		rid := strings.TrimSuffix(strings.TrimPrefix(rest, "results/"), "/count")
-		rid = strings.TrimSuffix(rid, "/")
-		h.postResultCount(w, r, sid, rid)
-	case strings.HasPrefix(rest, "results/") && strings.Contains(rest, "/window") && r.Method == http.MethodGet:
-		h.getResultWindow(w, r, sid, rest)
-	case strings.HasPrefix(rest, "results/") && strings.Contains(rest, "/value") && r.Method == http.MethodGet:
-		h.getResultValue(w, r, sid, rest)
-	case strings.HasPrefix(rest, "results/") && r.Method == http.MethodDelete:
-		rid := strings.TrimPrefix(rest, "results/")
-		rid = strings.TrimSuffix(rid, "/")
-		h.deleteResult(w, r, sid, rid)
-	default:
-		http.Error(w, "not found", http.StatusNotFound)
-	}
-}
-
 func (h *SessionsHandler) postResult(w http.ResponseWriter, r *http.Request, sid string) {
 	s, ok := h.mgr.Get(sid)
 	if !ok {

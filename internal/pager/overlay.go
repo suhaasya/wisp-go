@@ -1,7 +1,5 @@
 package pager
 
-import "github.com/suhaasya/wisp-go/internal/driver"
-
 // Overlay holds staged edit markers for one result (LW-029).
 type Overlay struct {
 	Mod [][]int
@@ -30,9 +28,4 @@ func (o Overlay) wire() OverlayWire {
 		del = []int{}
 	}
 	return OverlayWire{Mod: mod, Ins: ins, Del: del}
-}
-
-func applyOverlay(w *driver.Window, o Overlay) {
-	_ = w
-	_ = o
 }

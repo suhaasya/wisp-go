@@ -12,6 +12,7 @@ export interface InputProps {
   ariaLabel?: string;
   onInput?: (value: string) => void;
   onFocus?: () => void;
+  onBlur?: (e: FocusEvent) => void;
 }
 
 const fieldClass =
@@ -29,6 +30,7 @@ export function Input({
   ariaLabel,
   onInput,
   onFocus,
+  onBlur,
 }: InputProps) {
   const inputId = id ?? (label ? `input-${label.replace(/\s+/g, "-").toLowerCase()}` : undefined);
   return (
@@ -49,6 +51,7 @@ export function Input({
           disabled={disabled}
           readOnly={readOnly}
           onFocus={onFocus}
+          onBlur={onBlur}
           onInput={(e) => onInput?.((e.target as HTMLInputElement).value)}
         />
       ) : (
@@ -61,6 +64,7 @@ export function Input({
           disabled={disabled}
           readOnly={readOnly}
           onFocus={onFocus}
+          onBlur={onBlur}
           onInput={(e) => onInput?.((e.target as HTMLInputElement).value)}
         />
       )}

@@ -77,6 +77,21 @@
   --color-on-accent: #0b1f1e;
 }
 
+@layer components {
+  .grid-cell-mod {
+    @apply bg-modified;
+    box-shadow: inset 0 0 0 1px var(--color-modified-line);
+  }
+
+  .grid-row-del .grid-cell {
+    @apply bg-deleted text-ink-3 line-through;
+  }
+
+  .grid-row-ins .grid-cell {
+    @apply bg-inserted;
+  }
+}
+
 @layer base {
   html {
     height: 100%;

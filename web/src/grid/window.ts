@@ -8,6 +8,12 @@ export type RowTotal = {
   value: number;
 };
 
+export type WindowOverlay = {
+  mod: number[][];
+  ins: number[];
+  del: number[];
+};
+
 /** Columnar window payload from GET .../results/{rid}/window */
 export type WindowPayload = {
   rid: string;
@@ -17,6 +23,7 @@ export type WindowPayload = {
   data: unknown[][];
   nulls?: number[][];
   truncated?: number[][];
+  overlay?: WindowOverlay;
 };
 
 export const DEFAULT_WINDOW_ROWS = 150;

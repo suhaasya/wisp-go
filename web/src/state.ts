@@ -32,4 +32,16 @@ export const serverVersion = signal("—");
 export const latencyMs = signal<number | null>(null);
 export const readOnly = signal(false);
 export const shellConnection = signal<ShellConnection | null>(null);
+export const sessionEngine = signal<string>("postgres");
+export const workspaceProfileId = signal<string | null>(null);
+
+export type WorkspaceTableTab = {
+  id: string;
+  schema: string;
+  table: string;
+  mode: "data" | "structure";
+};
+
+export const workspaceTabs = signal<WorkspaceTableTab[]>([]);
+export const activeWorkspaceTabId = signal<string | null>(null);
 export const csrfToken = signal("");

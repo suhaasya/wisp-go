@@ -3,6 +3,7 @@ import {
   currentSession,
   latencyMs,
   readOnly,
+  sessionEngine,
   sessionState,
   shellConnection,
   type ShellConnection,
@@ -37,6 +38,7 @@ function mapEnv(env: string): ShellConnection["env"] {
 export function applySessionInfo(sid: string, info: SessionInfo): void {
   currentSession.value = sid;
   readOnly.value = info.read_only;
+  sessionEngine.value = info.engine || "postgres";
   const env = mapEnv(info.env);
   shellConnection.value = {
     name: info.database,

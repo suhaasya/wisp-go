@@ -1,5 +1,6 @@
 import { request } from "./api";
 import { navigate } from "./router";
+import { workspaceProfileId } from "./state";
 import { MOCK_CONNECTIONS, makeMockProfiles } from "./connections/mock-data";
 
 export type ProfileEnv = "local" | "development" | "staging" | "production";
@@ -278,6 +279,7 @@ export async function connectProfile(profileId: string): Promise<string> {
 }
 
 export async function openWorkspaceSession(profileId: string): Promise<void> {
+  workspaceProfileId.value = profileId;
   const sid = await connectProfile(profileId);
   navigate(`/w/${encodeURIComponent(sid)}`);
 }

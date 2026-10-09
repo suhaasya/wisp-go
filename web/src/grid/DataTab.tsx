@@ -1,21 +1,21 @@
 import { useEffect, useState } from "preact/hooks";
-import type { TableBrowseQuery, TableSortKey } from "../state";
-import {
-  appliedBrowseQuery,
-  browseQueryKey,
-  updateTableTabBrowseQuery,
-} from "../workspace/browse-query";
+import type { TableSortKey } from "../state";
+import { appliedBrowseQuery, browseQueryKey, updateTableTabBrowseQuery } from "../workspace/browse-query";
 import { FilterBar } from "../workspace/filter-bar";
+import { shouldLoadTableResult } from "../workspace/table-load";
+import { updateTableDataTabState } from "../workspace/tabs";
+import type { WorkspaceTab } from "../state";
 import { Grid } from "./Grid";
 import { closeResult, openTableResult, type OpenResultResponse } from "./results-client";
-import type { WorkspaceTableTab } from "../state";
 
-export function DataTab({ sessionId, tab }: { sessionId: string; tab: WorkspaceTableTab }) {
+type TableDataTab = Extract<WorkspaceTab, { kind: "table_data" }>;
+
+export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataTab }) {
   const [open, setOpen] = useState<OpenResultResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const applied = appliedBrowseQuery(tab);
   const appliedKey = browseQueryKey(applied);
-
+  const loadResults = shouldLoadTableResult(tab);
   const [sortDraft, setSortDraft] = useState<TableSortKey[]>(() => applied.sort);
 
   useEffect(() => {
@@ -27,6 +27,11 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: WorkspaceT
     const ac = new AbortController();
     setOpen(null);
     setError(null);
+    if (!loadResults) {
+      return () => {
+        ac.abort();
+      };
+    }
     void openTableResult(sessionId, tab.schema, tab.table, applied, ac.signal)
       .then((res) => {
         rid = res.rid;
@@ -44,10 +49,18 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: WorkspaceT
         void closeResult(sessionId, rid).catch(() => {});
       }
     };
-  }, [sessionId, tab.schema, tab.table, appliedKey]);
+  }, [sessionId, tab.schema, tab.table, appliedKey, loadResults]);
 
-  function handleApply(query: TableBrowseQuery) {
+  function handleApply(query: Parameters<typeof updateTableTabBrowseQuery>[1]) {
     updateTableTabBrowseQuery(tab.id, query);
+  }
+
+  if (!loadResults) {
+    return (
+      <div class="flex flex-1 flex-col items-center justify-center p-6 text-13 text-ink-2">
+        Tab restored — click the tab again to load data.
+      </div>
+    );
   }
 
   if (error) {
@@ -62,7 +75,7 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: WorkspaceT
         columns={open.columns}
         applied={applied}
         sortDraft={sortDraft}
-        onApply={handleApply}
+        onApply={(query) => handleApply({ ...query, sort: sortDraft })}
       />
       <Grid
         sessionId={sessionId}
@@ -73,6 +86,8 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: WorkspaceT
         table={tab.table}
         sortDraft={sortDraft}
         onSortDraftChange={setSortDraft}
+        initialScrollTop={tab.scrollTop}
+        onScrollTopChange={(top) => updateTableDataTabState(tab.id, { scrollTop: top })}
       />
     </div>
   );

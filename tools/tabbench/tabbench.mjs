@@ -80,6 +80,17 @@ async function run() {
   metrics.dom_nodes = { value: byName.Nodes ?? 0 };
   metrics.tab_total_mb = { value: (byName.JSHeapUsedSize ?? 0) / (1024 * 1024) };
 
+  await page.goto(`${base}/#/bench/workspace-tabs`, { waitUntil: "networkidle" });
+  await page.waitForSelector('[data-testid="workspace-tabs-bench"]');
+  const tabCount = await page.locator('[role="tab"]').count();
+  if (tabCount !== 20) {
+    throw new Error(`expected 20 workspace tabs, got ${tabCount}`);
+  }
+  const wsCdp = await cdp.send("Performance.getMetrics");
+  const wsByName = Object.fromEntries(wsCdp.metrics.map((m) => [m.name, m.value]));
+  metrics.js_heap_idle_mb = { value: (wsByName.JSHeapUsedSize ?? jsBytes) / (1024 * 1024) };
+  metrics.dom_nodes = { value: wsByName.Nodes ?? metrics.dom_nodes.value };
+
   await page.goto(`${base}/#/bench/grid`, { waitUntil: "networkidle" });
   await page.waitForSelector('[data-testid="wisp-grid-scroll"]');
 

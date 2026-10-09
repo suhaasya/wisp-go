@@ -3,7 +3,7 @@ import {
   type TableBrowseFilter,
   type TableBrowseQuery,
   type TableSortKey,
-  type WorkspaceTableTab,
+  type WorkspaceTab,
 } from "../state";
 
 export type { TableBrowseFilter, TableBrowseQuery, TableFilterCondition, TableSortKey } from "../state";
@@ -27,13 +27,13 @@ export function browseQueryKey(q: TableBrowseQuery | undefined): string {
   return JSON.stringify(q);
 }
 
-export function appliedBrowseQuery(tab: WorkspaceTableTab): TableBrowseQuery {
+export function appliedBrowseQuery(tab: Extract<WorkspaceTab, { kind: "table_data" }>): TableBrowseQuery {
   return tab.browseQuery ?? emptyBrowseQuery();
 }
 
 export function updateTableTabBrowseQuery(tabId: string, query: TableBrowseQuery): void {
   workspaceTabs.value = workspaceTabs.value.map((t) =>
-    t.id === tabId ? { ...t, browseQuery: query } : t,
+    t.id === tabId && t.kind === "table_data" ? { ...t, browseQuery: query } : t,
   );
 }
 

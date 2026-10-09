@@ -40,6 +40,25 @@ function LazyWorkspace({ sessionId }: { sessionId: string }) {
   return <Screen sessionId={sessionId} />;
 }
 
+function LazyWorkspaceTabsBench() {
+  const [Screen, setScreen] = useState<ComponentType | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    import("../workspace/WorkspaceTabsBench").then((mod) => {
+      if (!cancelled) {
+        setScreen(() => mod.WorkspaceTabsBench);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (!Screen) {
+    return <div class="flex flex-1 bg-canvas" aria-busy="true" />;
+  }
+  return <Screen />;
+}
+
 function LazyGridBench() {
   const [Screen, setScreen] = useState<ComponentType | null>(null);
   useEffect(() => {
@@ -99,6 +118,9 @@ export function RouteScreen({ route: r }: { route: Route }) {
       break;
     case "bench-grid":
       screen = <LazyGridBench />;
+      break;
+    case "bench-workspace-tabs":
+      screen = <LazyWorkspaceTabsBench />;
       break;
     default:
       screen = null;

@@ -59,15 +59,40 @@ export type TableBrowseQuery = {
   sort: TableSortKey[];
 };
 
-export type WorkspaceTableTab = {
-  id: string;
-  schema: string;
-  table: string;
-  mode: "data" | "structure";
-  /** Applied filter/sort; refetch only when this changes (Apply). */
-  browseQuery?: TableBrowseQuery;
-};
+export type WorkspaceTab =
+  | {
+      id: string;
+      kind: "table_data";
+      schema: string;
+      table: string;
+      pinned?: boolean;
+      browseQuery?: TableBrowseQuery;
+      scrollTop?: number;
+      selection?: { anchor_row: number; anchor_col: number };
+      /** When true, table result is not fetched until the user activates the tab. */
+      pendingResultLoad?: boolean;
+    }
+  | {
+      id: string;
+      kind: "table_structure";
+      schema: string;
+      table: string;
+      pinned?: boolean;
+    }
+  | {
+      id: string;
+      kind: "query";
+      title?: string;
+      queryText?: string;
+      pinned?: boolean;
+    }
+  | {
+      id: string;
+      kind: "server_tools";
+      pinned?: boolean;
+    };
 
-export const workspaceTabs = signal<WorkspaceTableTab[]>([]);
+export const workspaceTabs = signal<WorkspaceTab[]>([]);
+export const workspaceHydratedFromServer = signal(false);
 export const activeWorkspaceTabId = signal<string | null>(null);
 export const csrfToken = signal("");

@@ -64,6 +64,11 @@ func (p Paths) ConnectionsJSON() string {
 	return filepath.Join(p.ConfigDir, "connections.json")
 }
 
+// WorkspaceJSON is persisted workspace tabs for one connection profile.
+func (p Paths) WorkspaceJSON(profileID string) string {
+	return filepath.Join(p.DataDir, "workspace", profileID+".json")
+}
+
 // SecretsBin is the encrypted secrets fallback file.
 func (p Paths) SecretsBin() string {
 	return filepath.Join(p.DataDir, "secrets.bin")

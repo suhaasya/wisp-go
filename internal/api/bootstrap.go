@@ -21,6 +21,7 @@ type AppHandlers struct {
 	HostKeyAccept   http.Handler
 	FS              http.Handler
 	Sessions        http.Handler
+	Workspace       http.Handler
 	HelloSettings   SettingsSnapshot
 	CloseSessions   func(context.Context) error
 }
@@ -48,6 +49,7 @@ func NewAppHandlers(settingsPath string, paths store.Paths, probe store.KeyringP
 	}
 	snap := func() (map[string]any, error) { return settingsStore.DocumentJSON() }
 	sessionMgr := session.NewManager(profileStore, secretsStore, hub)
+	workspaceStore := session.NewWorkspaceStore(paths, profileStore)
 	return &AppHandlers{
 		Settings:        NewSettingsHandler(settingsStore, hub),
 		Secrets:         NewSecretsHandler(secretsStore),
@@ -57,6 +59,7 @@ func NewAppHandlers(settingsPath string, paths store.Paths, probe store.KeyringP
 		HostKeyAccept:   NewHostKeyAcceptHandler(),
 		FS:              NewFSHandler(home),
 		Sessions:        NewSessionsHandler(sessionMgr),
+		Workspace:       NewWorkspaceHandler(workspaceStore),
 		HelloSettings:   snap,
 		CloseSessions:   sessionMgr.CloseAll,
 	}, nil

@@ -27,6 +27,8 @@ export type GridProps = {
   table: string;
   sortDraft?: TableSortKey[];
   onSortDraftChange?: (sort: TableSortKey[]) => void;
+  initialScrollTop?: number;
+  onScrollTopChange?: (top: number) => void;
   fetchWindow?: (offset: number, signal: AbortSignal) => Promise<WindowPayload>;
 };
 
@@ -142,6 +144,7 @@ export function Grid(props: GridProps) {
     });
 
     const onScroll = () => {
+      props.onScrollTopChange?.(scrollEl.scrollTop);
       pool?.scheduleLayout();
       const headerH = headerMount.offsetHeight;
       const first = Math.floor(Math.max(0, scrollEl.scrollTop - headerH) / rowHeight);
@@ -155,6 +158,10 @@ export function Grid(props: GridProps) {
         lastFetch.value = t.toLocaleTimeString();
       }
     };
+
+    if (props.initialScrollTop && props.initialScrollTop > 0) {
+      scrollEl.scrollTop = props.initialScrollTop;
+    }
 
     scrollEl.addEventListener("scroll", onScroll, { passive: true });
     onScroll();

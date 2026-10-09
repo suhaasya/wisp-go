@@ -6,7 +6,8 @@ export type Route =
   | { name: "connection-edit"; id: string }
   | { name: "workspace"; sessionId: string }
   | { name: "gallery" }
-  | { name: "bench-grid" };
+  | { name: "bench-grid" }
+  | { name: "bench-workspace-tabs" };
 
 function initialRoute(): Route {
   if (typeof location === "undefined") {
@@ -24,6 +25,9 @@ export function parseRoute(hash: string): Route {
   }
   if (path === "/bench/grid") {
     return { name: "bench-grid" };
+  }
+  if (path === "/bench/workspace-tabs") {
+    return { name: "bench-workspace-tabs" };
   }
   if (path === "/connections") {
     return { name: "connections" };

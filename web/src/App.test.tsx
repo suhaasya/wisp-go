@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import { App } from "./App";
 
 describe("App", () => {
-  it("renders placeholder shell", () => {
+  it("renders connections screen", async () => {
     render(<App />);
-    expect(screen.getByRole("heading", { name: "Connections" })).toBeTruthy();
+    expect(await screen.findByLabelText("Search connections")).toBeTruthy();
   });
 });

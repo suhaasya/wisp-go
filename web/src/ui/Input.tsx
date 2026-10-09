@@ -8,6 +8,7 @@ export interface InputProps {
   value?: string;
   placeholder?: string;
   disabled?: boolean;
+  ariaLabel?: string;
   onInput?: (value: string) => void;
 }
 
@@ -22,6 +23,7 @@ export function Input({
   value,
   placeholder,
   disabled,
+  ariaLabel,
   onInput,
 }: InputProps) {
   const inputId = id ?? (label ? `input-${label.replace(/\s+/g, "-").toLowerCase()}` : undefined);
@@ -36,6 +38,7 @@ export function Input({
         <input
           id={inputId}
           type="password"
+          aria-label={ariaLabel}
           class={cx(fieldClass, mono && "font-mono text-12-5")}
           value={value}
           placeholder={placeholder}
@@ -45,6 +48,7 @@ export function Input({
       ) : (
         <input
           id={inputId}
+          aria-label={ariaLabel}
           class={cx(fieldClass, mono && "font-mono text-12-5")}
           value={value}
           placeholder={placeholder}

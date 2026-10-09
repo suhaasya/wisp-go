@@ -67,7 +67,7 @@ export function AppShell() {
     <div class="flex min-h-screen flex-col bg-canvas text-ink">
       {wispStopped.value ? <StoppedBanner /> : null}
       <TitleBar />
-      <main class="min-h-0 flex-1 overflow-auto">
+      <main class="flex min-h-0 flex-1 flex-col overflow-hidden">
         <RouteScreen route={route.value} />
       </main>
       <StatusBar />

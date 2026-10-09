@@ -5,7 +5,8 @@
   "scripts": {
     "bench": "node tabbench.mjs",
     "gallery": "node gallery.mjs",
-    "shell-nav": "node shell-nav.mjs"
+    "shell-nav": "node shell-nav.mjs",
+    "connections-screen": "node connections-screen.mjs"
   },
   "devDependencies": {
     "playwright": "1.55.0"

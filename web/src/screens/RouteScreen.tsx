@@ -1,14 +1,30 @@
+import { useEffect, useState } from "preact/hooks";
+import type { ComponentType } from "preact";
 import type { Route } from "../router";
+
+function LazyConnectionsScreen() {
+  const [Screen, setScreen] = useState<ComponentType | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    import("./connections").then((mod) => {
+      if (!cancelled) {
+        setScreen(() => mod.ConnectionsScreen);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (!Screen) {
+    return <div class="flex flex-1 bg-canvas" aria-busy="true" />;
+  }
+  return <Screen />;
+}
 
 export function RouteScreen({ route: r }: { route: Route }) {
   switch (r.name) {
     case "connections":
-      return (
-        <section class="p-6">
-          <h2 class="text-15 font-semibold text-ink">Connections</h2>
-          <p class="mt-2 text-13 text-ink-2">Connection list (LW-010+).</p>
-        </section>
-      );
+      return <LazyConnectionsScreen />;
     case "connection-new":
       return (
         <section class="p-6">

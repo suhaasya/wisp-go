@@ -1,0 +1,11 @@
+# LW-048 will add scheduled release builds, signing, and publishing.
+name: nightly
+
+on:
+  workflow_dispatch:
+
+jobs:
+  placeholder:
+    runs-on: ubuntu-24.04
+    steps:
+      - run: echo "Nightly release pipeline is not implemented yet (LW-048)."

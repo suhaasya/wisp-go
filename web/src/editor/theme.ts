@@ -44,6 +44,25 @@ export function wispEditorTheme() {
       "&.cm-focused .cm-selectionBackground, .cm-selectionBackground": {
         backgroundColor: "var(--color-accent-soft) !important",
       },
+      ".cm-tooltip.cm-tooltip-autocomplete": {
+        backgroundColor: "var(--color-panel)",
+        border: "1px solid var(--color-line)",
+        borderRadius: "8px",
+        minWidth: "250px",
+      },
+      ".cm-tooltip.cm-tooltip-autocomplete > ul": {
+        fontFamily: "var(--font-mono)",
+        fontSize: "12.5px",
+      },
+      ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]": {
+        backgroundColor: "var(--color-accent-soft)",
+        color: "var(--color-ink)",
+      },
+      ".cm-completionDetail": {
+        color: "var(--color-ink-3)",
+        fontStyle: "normal",
+        marginLeft: "8px",
+      },
     }),
     syntaxHighlighting(
       HighlightStyle.define([

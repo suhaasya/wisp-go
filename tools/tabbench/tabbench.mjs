@@ -137,6 +137,17 @@ async function run() {
     };
   }
 
+  try {
+    const { benchQueryComplete } = await import("./query-complete.mjs");
+    await benchQueryComplete(page);
+    metrics.sql_completion_bench = { value: 1 };
+  } catch (err) {
+    metrics.sql_completion_bench = {
+      skipped: true,
+      reason: err instanceof Error ? err.message : String(err),
+    };
+  }
+
   await browser.close();
   await writeResults();
 }

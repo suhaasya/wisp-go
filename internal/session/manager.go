@@ -89,6 +89,21 @@ func (m *Manager) CloseAll(ctx context.Context) error {
 	return nil
 }
 
+// AdoptSession registers a session shell (tests).
+func (m *Manager) AdoptSession(s *Session) {
+	if s == nil {
+		return
+	}
+	if s.onMetadataBump == nil && m.broadcast != nil {
+		s.onMetadataBump = func(sid string) {
+			m.broadcast.Broadcast("schema", map[string]any{"sid": sid})
+		}
+	}
+	m.mu.Lock()
+	m.sessions[s.ID()] = s
+	m.mu.Unlock()
+}
+
 // Get returns a live session by id.
 func (m *Manager) Get(id string) (*Session, bool) {
 	m.mu.Lock()
@@ -146,6 +161,11 @@ func (m *Manager) Create(ctx context.Context, profileID string) (*Session, drive
 		dbPassword: pw,
 		sshSec:     sshSec,
 		onState:    m.emitState,
+		onMetadataBump: func(sid string) {
+			if m.broadcast != nil {
+				m.broadcast.Broadcast("schema", map[string]any{"sid": sid})
+			}
+		},
 	}
 	now := m.clock()
 	s.lastActivity = now

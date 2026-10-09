@@ -114,6 +114,9 @@ func (s *Session) InvalidateMetadata() {
 	if cache != nil {
 		cache.invalidateAll()
 	}
+	if s.onMetadataBump != nil {
+		s.onMetadataBump(s.id)
+	}
 }
 
 // MetadataCacheStats returns cache sizes (for tests).

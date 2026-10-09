@@ -2,14 +2,21 @@ import { render, waitFor } from "@testing-library/preact";
 import { describe, expect, it, vi } from "vitest";
 import { QueryTab } from "./QueryTab";
 
-const { destroy, mountSqlEditor } = vi.hoisted(() => {
+const { destroy, mountSqlEditor, setCompletionSchema } = vi.hoisted(() => {
   const destroy = vi.fn();
-  const mountSqlEditor = vi.fn(() => ({ view: {}, destroy }));
-  return { destroy, mountSqlEditor };
+  const setCompletionSchema = vi.fn();
+  const mountSqlEditor = vi.fn(() => ({ view: {}, destroy, setCompletionSchema }));
+  return { destroy, mountSqlEditor, setCompletionSchema };
 });
 
 vi.mock("../editor/index.ts", () => ({
   mountSqlEditor,
+}));
+
+vi.mock("./completion-client.ts", () => ({
+  fetchCompletionSchema: vi.fn(() =>
+    Promise.resolve({ schema: "public", tables: [] }),
+  ),
 }));
 
 describe("QueryTab", () => {

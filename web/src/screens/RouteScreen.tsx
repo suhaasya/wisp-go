@@ -59,6 +59,25 @@ function LazyWorkspaceTabsBench() {
   return <Screen />;
 }
 
+function LazyQueryCompleteBench() {
+  const [Screen, setScreen] = useState<ComponentType | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    import("../workspace/QueryCompleteBench").then((mod) => {
+      if (!cancelled) {
+        setScreen(() => mod.QueryCompleteBench);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (!Screen) {
+    return <div class="flex flex-1 bg-canvas" aria-busy="true" />;
+  }
+  return <Screen />;
+}
+
 function LazyQueryEditorBench() {
   const [Screen, setScreen] = useState<ComponentType | null>(null);
   useEffect(() => {
@@ -143,6 +162,9 @@ export function RouteScreen({ route: r }: { route: Route }) {
       break;
     case "bench-query-editor":
       screen = <LazyQueryEditorBench />;
+      break;
+    case "bench-query-complete":
+      screen = <LazyQueryCompleteBench />;
       break;
     default:
       screen = null;

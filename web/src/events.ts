@@ -1,4 +1,5 @@
 import { applySettings, type WispSettings } from "./settings";
+import { emitSchemaInvalidated } from "./editor/schema-events";
 import { handleSessionSSE } from "./session-workspace";
 import { goMemoryMB, wispStopped } from "./state";
 
@@ -50,6 +51,14 @@ function handleMessage(raw: string): void {
     case "session":
       if (parsed.data && typeof parsed.data === "object") {
         handleSessionSSE(parsed.data as { sid?: string; state?: string });
+      }
+      break;
+    case "schema":
+      if (parsed.data && typeof parsed.data === "object") {
+        const sid = (parsed.data as { sid?: string }).sid;
+        if (sid) {
+          emitSchemaInvalidated(sid);
+        }
       }
       break;
     default:

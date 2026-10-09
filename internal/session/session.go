@@ -38,6 +38,7 @@ type Session struct {
 	keepCancel     context.CancelFunc
 	connector      Connector
 	onState        func(id string, st State, info driver.ServerInfo)
+	onMetadataBump func(id string)
 
 	serverInfo driver.ServerInfo
 	dbPassword []byte

@@ -22,6 +22,8 @@ type objectsResponse struct {
 func (h *SessionsHandler) serveSchema(w http.ResponseWriter, r *http.Request, sid, rest string) {
 	refresh := queryRefresh(r)
 	switch {
+	case rest == "complete" && r.Method == http.MethodGet:
+		h.getCompletionSchema(w, r, sid)
 	case rest == "schemas" && r.Method == http.MethodGet:
 		h.getSchemas(w, r, sid, refresh)
 	case rest == "objects" && r.Method == http.MethodGet:
@@ -109,6 +111,36 @@ func (h *SessionsHandler) getTableDetails(w http.ResponseWriter, r *http.Request
 	}
 	s.TouchTabRef(time.Now())
 	writeJSON(w, det)
+}
+
+func (h *SessionsHandler) getCompletionSchema(w http.ResponseWriter, r *http.Request, sid string) {
+	s, ok := h.mgr.Get(sid)
+	if !ok {
+		writeError(w, http.StatusNotFound, "session_not_found", "Session not found.", "")
+		return
+	}
+	schema := strings.TrimSpace(r.URL.Query().Get("schema"))
+	if schema == "" {
+		writeError(w, http.StatusBadRequest, "invalid_query", "schema is required", "")
+		return
+	}
+	var extra []string
+	if raw := r.URL.Query().Get("tables"); raw != "" {
+		for _, part := range strings.Split(raw, ",") {
+			if t := strings.TrimSpace(part); t != "" {
+				extra = append(extra, t)
+			}
+		}
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+	out, err := s.CompletionSchema(ctx, schema, extra)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "complete_failed", "Could not build completion schema.", err.Error())
+		return
+	}
+	s.TouchTabRef(time.Now())
+	writeJSON(w, out)
 }
 
 func splitSchemaTablePath(path string) (schema, table string, ok bool) {

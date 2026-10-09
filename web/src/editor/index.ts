@@ -2,7 +2,7 @@ import { closeBrackets } from "@codemirror/autocomplete";
 import { history } from "@codemirror/commands";
 import { bracketMatching } from "@codemirror/language";
 import { MySQL, PostgreSQL, sql } from "@codemirror/lang-sql";
-import { EditorState } from "@codemirror/state";
+import { Compartment, EditorState, type Extension } from "@codemirror/state";
 import {
   drawSelection,
   EditorView,
@@ -10,6 +10,7 @@ import {
   highlightActiveLineGutter,
   lineNumbers,
 } from "@codemirror/view";
+import { toSQLNamespace, type CompletionSchemaDTO, type SchemaCompletionState } from "./complete";
 import { readCspNonce } from "./csp";
 import { wispEditorKeymap } from "./keymap";
 import { wispEditorTheme } from "./theme";
@@ -20,11 +21,14 @@ export type MountSqlEditorOptions = {
   parent: HTMLElement;
   value: string;
   engine: SqlEngine;
+  schema?: string;
+  completion?: CompletionSchemaDTO;
   onChange: (value: string) => void;
 };
 
 export type SqlEditorHandle = {
   view: EditorView;
+  setCompletionSchema: (data: CompletionSchemaDTO) => void;
   destroy: () => void;
 };
 
@@ -37,30 +41,63 @@ function sqlDialect(engine: SqlEngine) {
 
 export function mountSqlEditor(opts: MountSqlEditorOptions): SqlEditorHandle {
   const nonce = readCspNonce();
+  const dialect = sqlDialect(opts.engine);
+  const completionState: SchemaCompletionState = {
+    namespace: opts.completion ? toSQLNamespace(opts.completion) : {},
+    defaultSchema: opts.completion?.schema ?? opts.schema ?? "public",
+  };
+  const completionCompartment = new Compartment();
+
+  function sqlExtension(): Extension {
+    return sql({
+      dialect,
+      schema: completionState.namespace,
+      defaultSchema: completionState.defaultSchema,
+      upperCaseKeywords: opts.engine === "postgres",
+      keywordCompletion: (label, type) => ({
+        label,
+        type,
+        detail: type === "keyword" ? "keyword" : undefined,
+      }),
+    });
+  }
+
+  const baseExtensions: Extension[] = [
+    lineNumbers(),
+    highlightActiveLineGutter(),
+    highlightActiveLine(),
+    history(),
+    bracketMatching(),
+    closeBrackets(),
+    drawSelection(),
+    wispEditorTheme(),
+    wispEditorKeymap(),
+    completionCompartment.of(sqlExtension()),
+    EditorView.updateListener.of((u) => {
+      if (u.docChanged) {
+        opts.onChange(u.state.doc.toString());
+      }
+    }),
+    ...(nonce ? [EditorView.cspNonce.of(nonce)] : []),
+  ];
+
   const state = EditorState.create({
     doc: opts.value,
-    extensions: [
-      lineNumbers(),
-      highlightActiveLineGutter(),
-      highlightActiveLine(),
-      history(),
-      bracketMatching(),
-      closeBrackets(),
-      sql({ dialect: sqlDialect(opts.engine) }),
-      drawSelection(),
-      wispEditorTheme(),
-      wispEditorKeymap(),
-      EditorView.updateListener.of((u) => {
-        if (u.docChanged) {
-          opts.onChange(u.state.doc.toString());
-        }
-      }),
-      ...(nonce ? [EditorView.cspNonce.of(nonce)] : []),
-    ],
+    extensions: baseExtensions,
   });
   const view = new EditorView({ state, parent: opts.parent });
+
+  function setCompletionSchema(data: CompletionSchemaDTO) {
+    completionState.namespace = toSQLNamespace(data);
+    completionState.defaultSchema = data.schema;
+    view.dispatch({
+      effects: completionCompartment.reconfigure(sqlExtension()),
+    });
+  }
+
   return {
     view,
+    setCompletionSchema,
     destroy: () => {
       view.destroy();
     },

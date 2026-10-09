@@ -63,7 +63,7 @@ func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if i := strings.Index(path, "/"); i > 0 {
 			sid, rest := path[:i], path[i+1:]
 			switch rest {
-			case "schemas", "objects":
+			case "schemas", "objects", "complete":
 				h.serveSchema(w, r, sid, rest)
 				return
 			default:

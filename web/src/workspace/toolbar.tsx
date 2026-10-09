@@ -9,6 +9,7 @@ export type DataToolbarProps = {
   onDiscard: () => void;
   onReviewSQL: () => void;
   onExport?: () => void;
+  onImport?: () => void;
 };
 
 export function DataToolbar(props: DataToolbarProps) {
@@ -20,6 +21,7 @@ export function DataToolbar(props: DataToolbarProps) {
       <Button label="Duplicate row" disabled={disabled} onClick={props.onDuplicateRow} />
       <Button label="Delete row" disabled={disabled} onClick={props.onDeleteRow} />
       <Button label="Discard" disabled={disabled || n === 0} onClick={props.onDiscard} />
+      <Button label="Import" onClick={() => props.onImport?.()} />
       <Button label="Export" onClick={() => props.onExport?.()} />
       <span class="flex-1" />
       <Button

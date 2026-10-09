@@ -29,6 +29,7 @@ import { Grid, type GridCellAccess } from "./Grid";
 import { closeResult, openTableResult, type OpenResultResponse } from "./results-client";
 import { emptySelection, primaryRow, type SelectionState } from "./selection";
 import { ExportDialog } from "../dialogs/export";
+import { ImportDialog } from "../dialogs/import";
 import { onExportEvent } from "../editor/export-events";
 import {
   cancelFileExport,
@@ -64,6 +65,7 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
   const [typedOpen, setTypedOpen] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [fileExportId, setFileExportId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -339,6 +341,7 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
         onDiscard={() => void onDiscard()}
         onReviewSQL={() => void openReview()}
         onExport={() => setExportOpen(true)}
+        onImport={() => setImportOpen(true)}
       />
       <FilterBar
         columns={open.columns}
@@ -423,6 +426,14 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
         tableName={review?.table ?? tab.table}
         onCancel={() => setTypedOpen(false)}
         onConfirm={() => void runCommit(review?.table ?? tab.table)}
+      />
+      <ImportDialog
+        open={importOpen}
+        sessionId={sessionId}
+        schema={tab.schema}
+        defaultTable={tab.table}
+        onClose={() => setImportOpen(false)}
+        onComplete={() => gridAccess?.invalidateWindows()}
       />
       <ExportDialog
         open={exportOpen}

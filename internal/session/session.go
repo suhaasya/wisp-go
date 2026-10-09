@@ -55,6 +55,12 @@ type Session struct {
 
 	onExportBroadcast func(sid string, ev ExportEvent)
 
+	importMu sync.Mutex
+	imports  map[string]*importJob
+
+	onImportBroadcast func(sid string, ev ImportEvent)
+	onImportEvent     func(ImportEvent)
+
 	serverInfo driver.ServerInfo
 	dbPassword []byte
 	sshSec     SSHConnectSecrets

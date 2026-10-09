@@ -149,6 +149,19 @@ func (m *Manager) AdoptSession(s *Session) {
 			})
 		}
 	}
+	if s.onImportBroadcast == nil && m.broadcast != nil {
+		s.onImportBroadcast = func(sid string, ev ImportEvent) {
+			m.broadcast.Broadcast("import", map[string]any{
+				"sid":       sid,
+				"iid":       ev.IID,
+				"rows":      ev.Rows,
+				"bytes":     ev.Bytes,
+				"done":      ev.Done,
+				"cancelled": ev.Cancelled,
+				"error":     ev.Error,
+			})
+		}
+	}
 	m.mu.Lock()
 	m.sessions[s.ID()] = s
 	m.mu.Unlock()
@@ -227,6 +240,19 @@ func (m *Manager) Create(ctx context.Context, profileID string) (*Session, drive
 					"sid":       sid,
 					"eid":       ev.EID,
 					"rows":      ev.Rows,
+					"done":      ev.Done,
+					"cancelled": ev.Cancelled,
+					"error":     ev.Error,
+				})
+			}
+		},
+		onImportBroadcast: func(sid string, ev ImportEvent) {
+			if m.broadcast != nil {
+				m.broadcast.Broadcast("import", map[string]any{
+					"sid":       sid,
+					"iid":       ev.IID,
+					"rows":      ev.Rows,
+					"bytes":     ev.Bytes,
 					"done":      ev.Done,
 					"cancelled": ev.Cancelled,
 					"error":     ev.Error,

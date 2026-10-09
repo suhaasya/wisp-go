@@ -79,6 +79,9 @@ func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					h.getExport(w, r, sid)
 					return
 				}
+			case "import/preview", "import/start":
+				h.serveImport(w, r, sid, rest)
+				return
 			case "schemas", "objects", "complete":
 				h.serveSchema(w, r, sid, rest)
 				return
@@ -99,6 +102,10 @@ func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					qid := strings.TrimPrefix(rest, "cancel/")
 					qid = strings.TrimSuffix(qid, "/")
 					h.postCancelRun(w, r, sid, qid)
+					return
+				}
+				if strings.HasPrefix(rest, "import/") {
+					h.serveImport(w, r, sid, rest)
 					return
 				}
 				if strings.HasPrefix(rest, "export/") && strings.HasSuffix(rest, "/cancel") && r.Method == http.MethodPost {

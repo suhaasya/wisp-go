@@ -1,5 +1,6 @@
 import { applySettings, type WispSettings } from "./settings";
 import { emitExportEvent } from "./editor/export-events";
+import { emitImportEvent } from "./editor/import-events";
 import { emitQueryEvent } from "./editor/query-events";
 import { emitSchemaInvalidated } from "./editor/schema-events";
 import { handleSessionSSE } from "./session-workspace";
@@ -71,6 +72,11 @@ function handleMessage(raw: string): void {
     case "export":
       if (parsed.data && typeof parsed.data === "object") {
         emitExportEvent(parsed.data as import("./editor/export-events").ExportSSEPayload);
+      }
+      break;
+    case "import":
+      if (parsed.data && typeof parsed.data === "object") {
+        emitImportEvent(parsed.data as import("./editor/import-events").ImportSSEPayload);
       }
       break;
     default:

@@ -40,7 +40,7 @@ var allowedInternalDeps = map[string][]string{
 	},
 	modulePath + "/internal/api":    {modulePath + "/internal/session", modulePath + "/internal/store"},
 	modulePath + "/internal/server": {modulePath + "/internal/api"},
-	modulePath + "/internal/mover":  {modulePath + "/internal/driver"},
+	modulePath + "/internal/mover":  {modulePath + "/internal/driver", modulePath + "/internal/sqlgen"},
 	modulePath + "/internal/bench":  {},
 }
 

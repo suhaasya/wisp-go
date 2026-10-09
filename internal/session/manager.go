@@ -99,6 +99,11 @@ func (m *Manager) AdoptSession(s *Session) {
 			m.broadcast.Broadcast("schema", map[string]any{"sid": sid})
 		}
 	}
+	if s.onQueryBroadcast == nil && m.broadcast != nil {
+		s.onQueryBroadcast = func(sid string, ev QueryRunEvent) {
+			m.broadcast.Broadcast("query", queryEventPayload(sid, ev))
+		}
+	}
 	m.mu.Lock()
 	m.sessions[s.ID()] = s
 	m.mu.Unlock()
@@ -164,6 +169,11 @@ func (m *Manager) Create(ctx context.Context, profileID string) (*Session, drive
 		onMetadataBump: func(sid string) {
 			if m.broadcast != nil {
 				m.broadcast.Broadcast("schema", map[string]any{"sid": sid})
+			}
+		},
+		onQueryBroadcast: func(sid string, ev QueryRunEvent) {
+			if m.broadcast != nil {
+				m.broadcast.Broadcast("query", queryEventPayload(sid, ev))
 			}
 		},
 	}

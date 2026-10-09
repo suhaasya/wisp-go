@@ -33,12 +33,18 @@ type Session struct {
 
 	metaInitMu sync.Mutex
 
-	releaseSSH     func()
-	releaseMetaSSH func()
-	keepCancel     context.CancelFunc
-	connector      Connector
-	onState        func(id string, st State, info driver.ServerInfo)
-	onMetadataBump func(id string)
+	releaseSSH       func()
+	releaseMetaSSH   func()
+	keepCancel       context.CancelFunc
+	connector        Connector
+	onState          func(id string, st State, info driver.ServerInfo)
+	onMetadataBump   func(id string)
+	onQueryEvent     func(QueryRunEvent)
+	onQueryBroadcast func(sid string, ev QueryRunEvent)
+
+	runMu        sync.Mutex
+	runs         map[string]*runJob
+	queryRunRIDs []string
 
 	serverInfo driver.ServerInfo
 	dbPassword []byte
@@ -48,6 +54,13 @@ type Session struct {
 // Connector opens database connections for a profile (injected in tests).
 type Connector interface {
 	Connect(ctx context.Context, p store.Profile, password []byte, ssh SSHConnectSecrets) (driver.Conn, driver.ServerInfo, func(), error)
+}
+
+// AdoptMainConn wires a database connection (tests).
+func (s *Session) AdoptMainConn(c driver.Conn) {
+	s.mu.Lock()
+	s.main = c
+	s.mu.Unlock()
 }
 
 // NewTestSession builds a session shell for guard tests (no live connection).

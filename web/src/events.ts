@@ -1,4 +1,5 @@
 import { applySettings, type WispSettings } from "./settings";
+import { emitQueryEvent } from "./editor/query-events";
 import { emitSchemaInvalidated } from "./editor/schema-events";
 import { handleSessionSSE } from "./session-workspace";
 import { goMemoryMB, wispStopped } from "./state";
@@ -59,6 +60,11 @@ function handleMessage(raw: string): void {
         if (sid) {
           emitSchemaInvalidated(sid);
         }
+      }
+      break;
+    case "query":
+      if (parsed.data && typeof parsed.data === "object") {
+        emitQueryEvent(parsed.data as import("./editor/query-events").QuerySSEPayload);
       }
       break;
     default:

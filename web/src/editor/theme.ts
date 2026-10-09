@@ -34,6 +34,10 @@ export function wispEditorTheme() {
         padding: "10px 14px",
         caretColor: "var(--color-accent)",
       },
+      ".cm-runError": {
+        backgroundColor: "var(--color-deleted)",
+        outline: "1px solid var(--color-env-prod)",
+      },
       ".cm-gutter.cm-lineNumbers .cm-gutterElement": {
         padding: "0 10px 0 14px",
         minWidth: "2.5em",

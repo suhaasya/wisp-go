@@ -63,6 +63,16 @@ func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if i := strings.Index(path, "/"); i > 0 {
 			sid, rest := path[:i], path[i+1:]
 			switch rest {
+			case "run":
+				if r.Method == http.MethodPost {
+					h.postRun(w, r, sid)
+					return
+				}
+			case "explain":
+				if r.Method == http.MethodPost {
+					h.postExplain(w, r, sid)
+					return
+				}
 			case "schemas", "objects", "complete":
 				h.serveSchema(w, r, sid, rest)
 				return
@@ -73,6 +83,12 @@ func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				}
 				if rest == "results" || strings.HasPrefix(rest, "results/") {
 					h.serveResults(w, r, sid, rest)
+					return
+				}
+				if strings.HasPrefix(rest, "cancel/") && r.Method == http.MethodPost {
+					qid := strings.TrimPrefix(rest, "cancel/")
+					qid = strings.TrimSuffix(qid, "/")
+					h.postCancelRun(w, r, sid, qid)
 					return
 				}
 			}

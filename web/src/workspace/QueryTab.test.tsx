@@ -5,7 +5,17 @@ import { QueryTab } from "./QueryTab";
 const { destroy, mountSqlEditor, setCompletionSchema } = vi.hoisted(() => {
   const destroy = vi.fn();
   const setCompletionSchema = vi.fn();
-  const mountSqlEditor = vi.fn(() => ({ view: {}, destroy, setCompletionSchema }));
+  const setRunErrorAt = vi.fn();
+  const clearRunError = vi.fn();
+  const mountSqlEditor = vi.fn(() => ({
+    view: {},
+    destroy,
+    setCompletionSchema,
+    setRunErrorAt,
+    clearRunError,
+    getSelectionRange: () => ({ start: 0, end: 0 }),
+    getCursor: () => 0,
+  }));
   return { destroy, mountSqlEditor, setCompletionSchema };
 });
 

@@ -13,6 +13,8 @@ import {
 import { toSQLNamespace, type CompletionSchemaDTO, type SchemaCompletionState } from "./complete";
 import { readCspNonce } from "./csp";
 import { wispEditorKeymap } from "./keymap";
+import { runKeymapExtension, type RunKeymapHandlers } from "./run-keymap";
+import { applyRunError, clearRunError, runErrorExtension } from "./run-error";
 import { wispEditorTheme } from "./theme";
 
 export type SqlEngine = "postgres" | "mysql" | "mariadb";
@@ -24,11 +26,16 @@ export type MountSqlEditorOptions = {
   schema?: string;
   completion?: CompletionSchemaDTO;
   onChange: (value: string) => void;
+  runKeys?: RunKeymapHandlers;
 };
 
 export type SqlEditorHandle = {
   view: EditorView;
   setCompletionSchema: (data: CompletionSchemaDTO) => void;
+  setRunErrorAt: (byteOffset: number) => void;
+  clearRunError: () => void;
+  getSelectionRange: () => { start: number; end: number };
+  getCursor: () => number;
   destroy: () => void;
 };
 
@@ -72,6 +79,8 @@ export function mountSqlEditor(opts: MountSqlEditorOptions): SqlEditorHandle {
     drawSelection(),
     wispEditorTheme(),
     wispEditorKeymap(),
+    runErrorExtension(),
+    ...(opts.runKeys ? [runKeymapExtension(opts.runKeys)] : []),
     completionCompartment.of(sqlExtension()),
     EditorView.updateListener.of((u) => {
       if (u.docChanged) {
@@ -98,6 +107,13 @@ export function mountSqlEditor(opts: MountSqlEditorOptions): SqlEditorHandle {
   return {
     view,
     setCompletionSchema,
+    setRunErrorAt: (byteOffset: number) => applyRunError(view, byteOffset),
+    clearRunError: () => clearRunError(view),
+    getSelectionRange: () => {
+      const sel = view.state.selection.main;
+      return { start: sel.from, end: sel.to };
+    },
+    getCursor: () => view.state.selection.main.head,
     destroy: () => {
       view.destroy();
     },

@@ -120,7 +120,7 @@ export function SchemaSidebar({
 
   return (
     <aside
-      class="relative flex shrink-0 flex-col border-r border-line bg-sidebar"
+      class="relative flex h-full min-h-0 shrink-0 flex-col overflow-hidden border-r border-line bg-sidebar"
       style={{ width: `${ui.width}px` }}
     >
       <SchemaSelector
@@ -136,7 +136,7 @@ export function SchemaSidebar({
         onFilterChange={setFilter}
       />
       {schemasError ? (
-        <div class="flex flex-col gap-2 px-2.5 py-2 text-12-5 text-env-prod">
+        <div class="flex shrink-0 flex-col gap-2 px-2.5 py-2 text-12-5 text-env-prod">
           <p>{schemasError}</p>
           {!sessionId.startsWith("mock-") ? (
             <button type="button" class="text-left text-accent underline" onClick={() => void loadSchemas()}>

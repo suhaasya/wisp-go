@@ -40,7 +40,7 @@ export function SchemaSelector({
   const schemaOptions = schemas.map((s) => ({ value: s, label: s }));
 
   return (
-    <div class="flex flex-col gap-2 border-b border-line px-2.5 py-2.5">
+    <div class="flex shrink-0 flex-col gap-2 border-b border-line px-2.5 py-2.5">
       <div class="flex items-center justify-between rounded-control border border-line bg-panel px-2 py-1 text-12-5">
         <span class="min-w-0 truncate text-ink">
           <span class="font-medium">{database || "—"}</span>

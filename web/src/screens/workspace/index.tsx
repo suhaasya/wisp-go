@@ -28,16 +28,16 @@ export function WorkspaceScreen({ sessionId }: { sessionId: string }) {
   const activeTab = tabs.find((t) => t.id === activeId);
 
   return (
-    <div class="flex min-h-0 flex-1">
+    <div class="flex min-h-0 flex-1 overflow-hidden">
       <SchemaSidebar
         sessionId={sessionId}
         profileId={workspaceProfileId.value}
         engine={sessionEngine.value}
         onOpenTable={openWorkspaceTableTab}
       />
-      <div class="flex min-w-0 flex-1 flex-col bg-canvas">
+      <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-canvas">
         {tabs.length > 0 ? (
-          <div class="flex gap-1 border-b border-line bg-panel px-2 py-1">
+          <div class="flex shrink-0 gap-1 border-b border-line bg-panel px-2 py-1">
             {tabs.map((tab) => (
               <button
                 key={tab.id}
@@ -57,7 +57,7 @@ export function WorkspaceScreen({ sessionId }: { sessionId: string }) {
             ))}
           </div>
         ) : null}
-        <div class="flex min-h-0 flex-1 flex-col">
+        <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
           {activeTab && activeTab.mode === "data" ? (
             <DataTab key={activeTab.id} sessionId={sessionId} tab={activeTab} />
           ) : (

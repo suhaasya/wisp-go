@@ -53,7 +53,7 @@ export function AppShell() {
 
   if (sessionEnded.value) {
     return (
-      <div class="flex min-h-screen flex-col bg-canvas text-ink">
+      <div class="flex h-dvh min-h-0 flex-col overflow-hidden bg-canvas text-ink">
         <SessionEndedScreen />
       </div>
     );
@@ -64,7 +64,7 @@ export function AppShell() {
   }
 
   return (
-    <div class="flex min-h-screen flex-col bg-canvas text-ink">
+    <div class="flex h-dvh min-h-0 flex-col overflow-hidden bg-canvas text-ink">
       {wispStopped.value ? <StoppedBanner /> : null}
       <TitleBar />
       <main class="flex min-h-0 flex-1 flex-col overflow-hidden">

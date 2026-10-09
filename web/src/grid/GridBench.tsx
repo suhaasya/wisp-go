@@ -28,7 +28,7 @@ function syntheticWindow(offset: number): WindowPayload {
 /** Bench-only grid with 1M synthetic rows (tab memory gate). */
 export function GridBench() {
   return (
-    <div class="flex h-[600px] min-h-0 flex-col">
+    <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
       <Grid
         sessionId="bench"
         rid="bench"

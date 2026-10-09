@@ -1,5 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
-import type { ComponentType } from "preact";
+import type { ComponentChild, ComponentType } from "preact";
 import type { Route } from "../router";
 
 function LazyConnectionForm({ profileId }: { profileId?: string }) {
@@ -83,18 +83,25 @@ function LazyConnectionsScreen() {
 }
 
 export function RouteScreen({ route: r }: { route: Route }) {
+  let screen: ComponentChild;
   switch (r.name) {
     case "connections":
-      return <LazyConnectionsScreen />;
+      screen = <LazyConnectionsScreen />;
+      break;
     case "connection-new":
-      return <LazyConnectionForm />;
+      screen = <LazyConnectionForm />;
+      break;
     case "connection-edit":
-      return <LazyConnectionForm profileId={r.id} />;
+      screen = <LazyConnectionForm profileId={r.id} />;
+      break;
     case "workspace":
-      return <LazyWorkspace sessionId={r.sessionId} />;
+      screen = <LazyWorkspace sessionId={r.sessionId} />;
+      break;
     case "bench-grid":
-      return <LazyGridBench />;
+      screen = <LazyGridBench />;
+      break;
     default:
-      return null;
+      screen = null;
   }
+  return <div class="flex min-h-0 flex-1 flex-col overflow-hidden">{screen}</div>;
 }

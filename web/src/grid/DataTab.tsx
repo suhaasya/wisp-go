@@ -38,13 +38,15 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: WorkspaceT
     return <p class="p-4 text-13 text-ink-2">Loading table…</p>;
   }
   return (
-    <Grid
-      sessionId={sessionId}
-      rid={open.rid}
-      columns={open.columns}
-      total={open.total}
-      schema={tab.schema}
-      table={tab.table}
-    />
+    <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <Grid
+        sessionId={sessionId}
+        rid={open.rid}
+        columns={open.columns}
+        total={open.total}
+        schema={tab.schema}
+        table={tab.table}
+      />
+    </div>
   );
 }

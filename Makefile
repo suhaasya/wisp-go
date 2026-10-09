@@ -24,7 +24,7 @@ lint:
 dev:
 	@trap 'kill 0' INT TERM; \
 	(cd web && npm run dev) & \
-	go run ./cmd/wisp -dev & \
+	WISP_DEV_PORT=8787 go run ./cmd/wisp -dev -port 8787 & \
 	wait
 
 size: build

@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -33,6 +34,13 @@ func NewStatic(assetFS fs.FS, dev bool) (*Static, error) {
 func (s *Static) Register(mux *http.ServeMux) {
 	if s.Dev {
 		proxy := httputil.NewSingleHostReverseProxy(s.Vite)
+		proxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+			slog.Debug("vite proxy", "path", r.URL.Path, "err", err)
+			if s.serveDevFallback(w, r) {
+				return
+			}
+			http.Error(w, "Dev UI unavailable. Run make dev (Vite on :5173) or make web.", http.StatusBadGateway)
+		}
 		mux.Handle("/", proxy)
 		return
 	}
@@ -100,6 +108,30 @@ func modTime(fsys fs.FS, name string) (t time.Time) {
 		return t
 	}
 	return info.ModTime()
+}
+
+// serveDevFallback serves the embedded production build when Vite is not reachable.
+func (s *Static) serveDevFallback(w http.ResponseWriter, r *http.Request) bool {
+	if s.FS == nil {
+		return false
+	}
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		return false
+	}
+	if r.URL.Path == "/" || r.URL.Path == "" {
+		s.serveIndex(w, r)
+		return true
+	}
+	if strings.HasPrefix(r.URL.Path, "/assets/") {
+		name := strings.TrimPrefix(r.URL.Path, "/")
+		name = path.Clean(name)
+		if _, err := fs.Stat(s.FS, name); err != nil {
+			return false
+		}
+		s.serveAsset(w, r)
+		return true
+	}
+	return false
 }
 
 func injectNonce(html, nonce string) string {

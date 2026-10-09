@@ -6,6 +6,8 @@ import { defineConfig } from "vite";
 
 const webDir = fileURLToPath(new URL(".", import.meta.url));
 const repoRoot = join(webDir, "..");
+const wispDevPort = process.env.WISP_DEV_PORT ?? "8787";
+const wispDevOrigin = `http://127.0.0.1:${wispDevPort}`;
 
 export default defineConfig({
   plugins: [preact(), tailwindcss()],
@@ -13,6 +15,10 @@ export default defineConfig({
     host: "127.0.0.1",
     port: 5173,
     strictPort: true,
+    proxy: {
+      "/api": { target: wispDevOrigin, changeOrigin: true },
+      "/auth": { target: wispDevOrigin, changeOrigin: true },
+    },
   },
   build: {
     target: "es2022",

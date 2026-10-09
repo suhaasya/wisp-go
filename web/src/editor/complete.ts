@@ -11,6 +11,11 @@ export type CompletionSchemaDTO = {
   tables: CompletionTableDTO[];
 };
 
+export type SnippetCompletionDTO = {
+  name: string;
+  tags?: string[];
+};
+
 export function toSQLNamespace(data: CompletionSchemaDTO): SQLNamespace {
   const out: Record<string, SQLNamespace> = {};
   for (const table of data.tables) {
@@ -23,6 +28,22 @@ export function toSQLNamespace(data: CompletionSchemaDTO): SQLNamespace {
       };
     }
     out[table.name] = cols as unknown as SQLNamespace;
+  }
+  return out as SQLNamespace;
+}
+
+export function mergeSnippetsIntoNamespace(
+  ns: SQLNamespace,
+  snippets: SnippetCompletionDTO[],
+): SQLNamespace {
+  const out = { ...(ns as Record<string, SQLNamespace>) };
+  for (const sn of snippets) {
+    const tag = sn.tags?.length ? sn.tags.join(", ") : "snippet";
+    out[sn.name] = {
+      label: sn.name,
+      type: "keyword",
+      detail: tag,
+    } as unknown as SQLNamespace;
   }
   return out as SQLNamespace;
 }

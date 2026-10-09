@@ -8,6 +8,8 @@ import {
   type CompletionSchemaDTO,
 } from "../editor/complete";
 import { readOnly, sessionEngine, workspaceProfileId } from "../state";
+import { HistoryDrawer } from "./history-drawer";
+import { fetchSnippets, saveSnippet } from "./snippets-client";
 import type { WorkspaceTab } from "../state";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
@@ -44,6 +46,7 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
     clearRunError: () => void;
     getSelectionRange: () => { start: number; end: number };
     getCursor: () => number;
+    insertText: (text: string) => void;
   } | null>(null);
   const schemaDataRef = useRef<CompletionSchemaDTO>({ schema: "public", tables: [] });
   const hydrateTimerRef = useRef<number | null>(null);
@@ -58,6 +61,9 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
   const [messages, setMessages] = useState<QueryMessage[]>([]);
   const [explainRoot, setExplainRoot] = useState<ExplainNode | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [snippetOpen, setSnippetOpen] = useState(false);
+  const [snippetName, setSnippetName] = useState("");
   const pendingRunRef = useRef<RunBody | null>(null);
   const lastRunBodyRef = useRef<RunBody | null>(null);
   const resultCounterRef = useRef(0);
@@ -178,11 +184,16 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
       const engine = sessionEngine.value;
       const sqlEngine =
         engine === "mysql" || engine === "mariadb" ? engine : "postgres";
-      handleRef.current = mountSqlEditor({
+      void fetchSnippets().then((doc) => {
+        if (cancelled || !hostRef.current) {
+          return;
+        }
+        handleRef.current = mountSqlEditor({
         parent: hostRef.current,
         value: tab.queryText ?? "",
         engine: sqlEngine,
         schema,
+        snippets: doc.snippets.map((s) => ({ name: s.name, tags: s.tags })),
         runKeys: {
           onRunStatement,
           onRunAll,
@@ -203,10 +214,11 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
             }
           }, 400);
         },
+        });
+        sqlTextRef.current = tab.queryText ?? "";
+        hostRef.current!.dataset.editorMounted = "true";
+        loadSchema();
       });
-      sqlTextRef.current = tab.queryText ?? "";
-      hostRef.current.dataset.editorMounted = "true";
-      loadSchema();
     });
 
     const offSchema = onSchemaInvalidated((sid) => {
@@ -310,6 +322,8 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
         {running ? (
           <Button label="Cancel" variant="ghost" onClick={onCancel} />
         ) : null}
+        <Button label="History" onClick={() => setHistoryOpen(true)} />
+        <Button label="Save snippet" onClick={() => setSnippetOpen(true)} />
         <span class="flex-1" />
       </div>
       <div
@@ -324,7 +338,17 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
         meta={meta}
         onSelect={setActivePanelId}
       />
-      <div class="flex min-h-0 flex-1 flex-col overflow-hidden bg-canvas">
+      <div class="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-canvas">
+        <HistoryDrawer
+          open={historyOpen}
+          profileId={workspaceProfileId.value ?? ""}
+          onClose={() => setHistoryOpen(false)}
+          onInsert={(sql) => handleRef.current?.insertText(sql)}
+          onRun={(sql) => {
+            handleRef.current?.insertText(sql);
+            startRun({ sql, mode: "all", confirm: false });
+          }}
+        />
         {activePanelId === "messages" ? (
           <MessagesPanel
             lines={messages}
@@ -342,6 +366,37 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
           />
         ) : null}
       </div>
+      <Modal
+        open={snippetOpen}
+        title="Save snippet"
+        onClose={() => setSnippetOpen(false)}
+        footer={
+          <div class="flex justify-end gap-2">
+            <Button label="Cancel" onClick={() => setSnippetOpen(false)} />
+            <Button
+              label="Save"
+              variant="primary"
+              onClick={() => {
+                const name = snippetName.trim();
+                const sql = sqlTextRef.current.trim();
+                if (!name || !sql) {
+                  return;
+                }
+                void saveSnippet({ name, sql }).then(() => setSnippetOpen(false));
+              }}
+            />
+          </div>
+        }
+      >
+        <label class="block text-12 text-ink-2">
+          Name
+          <input
+            class="input mt-1 w-full font-mono text-13"
+            value={snippetName}
+            onInput={(e) => setSnippetName((e.target as HTMLInputElement).value)}
+          />
+        </label>
+      </Modal>
       <Modal
         open={confirmOpen}
         title="Confirm write"

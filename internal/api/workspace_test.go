@@ -25,7 +25,7 @@ func TestWorkspaceHandlerPutGet(t *testing.T) {
 		t.Fatal(err)
 	}
 	ws := session.NewWorkspaceStore(paths, ps)
-	h := api.NewWorkspaceHandler(ws)
+	h := api.NewWorkspaceHandler(ws, nil)
 	profileID := created.ID
 
 	payload, _ := json.Marshal(session.WorkspaceState{

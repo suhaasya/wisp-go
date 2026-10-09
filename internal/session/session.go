@@ -41,10 +41,13 @@ type Session struct {
 	onMetadataBump   func(id string)
 	onQueryEvent     func(QueryRunEvent)
 	onQueryBroadcast func(sid string, ev QueryRunEvent)
+	onJournalBump    func(profileID string)
+	onHistoryRecord  func(sql string, ms int64, rows int64, status string)
 
-	runMu        sync.Mutex
-	runs         map[string]*runJob
-	queryRunRIDs []string
+	runMu          sync.Mutex
+	pendingJournal []JournalBinding
+	runs           map[string]*runJob
+	queryRunRIDs   []string
 
 	serverInfo driver.ServerInfo
 	dbPassword []byte

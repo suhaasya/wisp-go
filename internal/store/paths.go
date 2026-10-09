@@ -69,6 +69,21 @@ func (p Paths) WorkspaceJSON(profileID string) string {
 	return filepath.Join(p.DataDir, "workspace", profileID+".json")
 }
 
+// HistoryJSONL is append-only query history for one profile.
+func (p Paths) HistoryJSONL(profileID string) string {
+	return filepath.Join(p.DataDir, "history", profileID+".jsonl")
+}
+
+// SnippetsJSON is saved SQL snippets.
+func (p Paths) SnippetsJSON() string {
+	return filepath.Join(p.DataDir, "snippets.json")
+}
+
+// JournalJSON is crash-safe workspace and change sets for one profile.
+func (p Paths) JournalJSON(profileID string) string {
+	return filepath.Join(p.DataDir, "journal", profileID+".json")
+}
+
 // SecretsBin is the encrypted secrets fallback file.
 func (p Paths) SecretsBin() string {
 	return filepath.Join(p.DataDir, "secrets.bin")

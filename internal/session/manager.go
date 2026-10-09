@@ -30,6 +30,10 @@ type Manager struct {
 	newID     func() string
 
 	stopEvict context.CancelFunc
+
+	journal   *JournalStore
+	workspace *WorkspaceStore
+	history   *store.HistoryStore
 }
 
 // NewManager returns a session manager wired to profiles and secrets.
@@ -48,6 +52,21 @@ func NewManager(profiles *store.ProfileStore, secrets store.Secrets, bc Broadcas
 	m.stopEvict = cancel
 	go m.evictLoop(ctx)
 	return m
+}
+
+// SetJournal wires crash-safe persistence (LW-034).
+func (m *Manager) SetJournal(j *JournalStore, ws *WorkspaceStore) {
+	m.mu.Lock()
+	m.journal = j
+	m.workspace = ws
+	m.mu.Unlock()
+}
+
+// SetHistory wires query history persistence.
+func (m *Manager) SetHistory(h *store.HistoryStore) {
+	m.mu.Lock()
+	m.history = h
+	m.mu.Unlock()
 }
 
 // SetConnector replaces the connector (tests).
@@ -80,8 +99,22 @@ func (m *Manager) CloseAll(ctx context.Context) error {
 		ids = append(ids, id)
 	}
 	m.mu.Unlock()
+	profileIDs := make(map[string]struct{})
+	m.mu.Lock()
+	for _, id := range ids {
+		if s, ok := m.sessions[id]; ok {
+			profileIDs[s.profile.ID] = struct{}{}
+		}
+	}
+	journal := m.journal
+	m.mu.Unlock()
 	for _, id := range ids {
 		_ = m.Delete(id)
+	}
+	if journal != nil {
+		for pid := range profileIDs {
+			_ = journal.Clear(pid)
+		}
 	}
 	if m.stopEvict != nil {
 		m.stopEvict()
@@ -176,6 +209,21 @@ func (m *Manager) Create(ctx context.Context, profileID string) (*Session, drive
 				m.broadcast.Broadcast("query", queryEventPayload(sid, ev))
 			}
 		},
+		onJournalBump: func(pid string) { m.scheduleJournal(pid) },
+		onHistoryRecord: func(sql string, ms int64, rows int64, status string) {
+			m.RecordHistory(snapshot, store.HistoryEntry{
+				TS:     m.clock().UnixMilli(),
+				SQL:    sql,
+				MS:     ms,
+				Rows:   rows,
+				Status: status,
+			})
+		},
+	}
+	if m.journal != nil {
+		if doc, err := m.journal.Restore(profileID); err == nil {
+			s.pendingJournal = doc.Bindings
+		}
 	}
 	now := m.clock()
 	s.lastActivity = now
@@ -230,6 +278,46 @@ func (m *Manager) loadSSHSecrets(profileID string) (SSHConnectSecrets, error) {
 		out.Passphrase = b
 	}
 	return out, nil
+}
+
+// ScheduleJournal debounces a journal flush for profileID.
+func (m *Manager) ScheduleJournal(profileID string) {
+	m.scheduleJournal(profileID)
+}
+
+func (m *Manager) scheduleJournal(profileID string) {
+	m.mu.Lock()
+	j := m.journal
+	ws := m.workspace
+	m.mu.Unlock()
+	if j == nil || ws == nil {
+		return
+	}
+	j.ScheduleFlush(profileID, func() (JournalDocument, error) {
+		st, err := ws.Load(profileID)
+		if err != nil {
+			return JournalDocument{}, err
+		}
+		m.mu.Lock()
+		var list []*Session
+		for _, sess := range m.sessions {
+			if sess.profile.ID == profileID {
+				list = append(list, sess)
+			}
+		}
+		m.mu.Unlock()
+		return SnapshotJournal(profileID, st, list), nil
+	})
+}
+
+func (m *Manager) RecordHistory(profile store.Profile, entry store.HistoryEntry) {
+	m.mu.Lock()
+	h := m.history
+	m.mu.Unlock()
+	if h == nil {
+		return
+	}
+	_ = h.Append(profile, entry)
 }
 
 func (m *Manager) emitState(id string, st State, info driver.ServerInfo) {

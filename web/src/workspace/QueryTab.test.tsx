@@ -15,6 +15,7 @@ const { destroy, mountSqlEditor, setCompletionSchema } = vi.hoisted(() => {
     clearRunError,
     getSelectionRange: () => ({ start: 0, end: 0 }),
     getCursor: () => 0,
+    insertText: vi.fn(),
   }));
   return { destroy, mountSqlEditor, setCompletionSchema };
 });
@@ -27,6 +28,11 @@ vi.mock("./completion-client.ts", () => ({
   fetchCompletionSchema: vi.fn(() =>
     Promise.resolve({ schema: "public", tables: [] }),
   ),
+}));
+
+vi.mock("./snippets-client.ts", () => ({
+  fetchSnippets: vi.fn(() => Promise.resolve({ version: 1, snippets: [] })),
+  saveSnippet: vi.fn(() => Promise.resolve({ id: "s1", name: "n", sql: "x" })),
 }));
 
 describe("QueryTab", () => {

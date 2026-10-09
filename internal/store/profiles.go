@@ -15,22 +15,23 @@ const profilesVersion = 1
 
 // Profile is a saved connection definition without secrets.
 type Profile struct {
-	ID           string          `json:"id"`
-	Name         string          `json:"name"`
-	Folder       string          `json:"folder"`
-	Engine       string          `json:"engine"`
-	Transport    Transport       `json:"transport"`
-	User         string          `json:"user"`
-	Database     string          `json:"database"`
-	PasswordMode string          `json:"password_mode"`
-	SSL          SSLConfig       `json:"ssl"`
-	SSH          *SSHConfig      `json:"ssh,omitempty"`
-	Env          string          `json:"env"`
-	ReadOnly     bool            `json:"read_only"`
-	SafeMode     bool            `json:"safe_mode"`
-	Options      ConnOptions     `json:"options"`
-	Advanced     ProfileAdvanced `json:"advanced"`
-	LastUsed     *time.Time      `json:"last_used,omitempty"`
+	ID                  string          `json:"id"`
+	Name                string          `json:"name"`
+	Folder              string          `json:"folder"`
+	Engine              string          `json:"engine"`
+	Transport           Transport       `json:"transport"`
+	User                string          `json:"user"`
+	Database            string          `json:"database"`
+	PasswordMode        string          `json:"password_mode"`
+	SSL                 SSLConfig       `json:"ssl"`
+	SSH                 *SSHConfig      `json:"ssh,omitempty"`
+	Env                 string          `json:"env"`
+	ReadOnly            bool            `json:"read_only"`
+	SafeMode            bool            `json:"safe_mode"`
+	DisableQueryHistory bool            `json:"disable_query_history,omitempty"`
+	Options             ConnOptions     `json:"options"`
+	Advanced            ProfileAdvanced `json:"advanced"`
+	LastUsed            *time.Time      `json:"last_used,omitempty"`
 }
 
 // ProfileAdvanced holds session defaults configured on connect.

@@ -90,8 +90,31 @@ func (s *Session) OpenResult(ctx context.Context, src pager.Source) (pager.OpenR
 		return pager.OpenResult{}, err
 	}
 	s.registerResultChanges(open.RID, src.KeyColumns, src.Schema, src.Table)
+	s.replayPendingJournal(open.RID, src.Schema, src.Table)
 	s.wirePagerOverlay()
 	return open, nil
+}
+
+func (s *Session) replayPendingJournal(rid, schema, table string) {
+	if len(s.pendingJournal) == 0 {
+		return
+	}
+	var keep []JournalBinding
+	for _, b := range s.pendingJournal {
+		if b.Schema == schema && b.Table == table {
+			rc, ok := s.resultChangesFor(rid)
+			if ok && rc != nil {
+				rc.tabID = b.TabID
+				for _, op := range b.Ops {
+					_ = rc.cs.Apply(op)
+					rc.journal = append(rc.journal, op)
+				}
+			}
+			continue
+		}
+		keep = append(keep, b)
+	}
+	s.pendingJournal = keep
 }
 
 // ResultWindowJSON returns encoded window bytes for a result.

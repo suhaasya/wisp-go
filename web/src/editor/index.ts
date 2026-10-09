@@ -10,7 +10,13 @@ import {
   highlightActiveLineGutter,
   lineNumbers,
 } from "@codemirror/view";
-import { toSQLNamespace, type CompletionSchemaDTO, type SchemaCompletionState } from "./complete";
+import {
+  mergeSnippetsIntoNamespace,
+  toSQLNamespace,
+  type CompletionSchemaDTO,
+  type SchemaCompletionState,
+  type SnippetCompletionDTO,
+} from "./complete";
 import { readCspNonce } from "./csp";
 import { wispEditorKeymap } from "./keymap";
 import { runKeymapExtension, type RunKeymapHandlers } from "./run-keymap";
@@ -25,6 +31,7 @@ export type MountSqlEditorOptions = {
   engine: SqlEngine;
   schema?: string;
   completion?: CompletionSchemaDTO;
+  snippets?: SnippetCompletionDTO[];
   onChange: (value: string) => void;
   runKeys?: RunKeymapHandlers;
 };
@@ -36,6 +43,7 @@ export type SqlEditorHandle = {
   clearRunError: () => void;
   getSelectionRange: () => { start: number; end: number };
   getCursor: () => number;
+  insertText: (text: string) => void;
   destroy: () => void;
 };
 
@@ -49,8 +57,12 @@ function sqlDialect(engine: SqlEngine) {
 export function mountSqlEditor(opts: MountSqlEditorOptions): SqlEditorHandle {
   const nonce = readCspNonce();
   const dialect = sqlDialect(opts.engine);
+  let namespace = opts.completion ? toSQLNamespace(opts.completion) : {};
+  if (opts.snippets?.length) {
+    namespace = mergeSnippetsIntoNamespace(namespace, opts.snippets);
+  }
   const completionState: SchemaCompletionState = {
-    namespace: opts.completion ? toSQLNamespace(opts.completion) : {},
+    namespace,
     defaultSchema: opts.completion?.schema ?? opts.schema ?? "public",
   };
   const completionCompartment = new Compartment();
@@ -114,6 +126,13 @@ export function mountSqlEditor(opts: MountSqlEditorOptions): SqlEditorHandle {
       return { start: sel.from, end: sel.to };
     },
     getCursor: () => view.state.selection.main.head,
+    insertText: (text: string) => {
+      const sel = view.state.selection.main;
+      view.dispatch({
+        changes: { from: sel.from, to: sel.to, insert: text },
+        selection: { anchor: sel.from + text.length },
+      });
+    },
     destroy: () => {
       view.destroy();
     },

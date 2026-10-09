@@ -14,7 +14,9 @@ type resultChanges struct {
 	keyCols  []string
 	schema   string
 	table    string
+	tabID    string
 	editable bool
+	journal  []Change
 }
 
 func (s *Session) registerResultChanges(rid string, keyCols []string, schema, table string) {
@@ -75,6 +77,10 @@ func (s *Session) ApplyResultChange(rid string, c Change) (int, error) {
 	}
 	if err := rc.cs.Apply(c); err != nil {
 		return 0, err
+	}
+	rc.journal = append(rc.journal, c)
+	if s.onJournalBump != nil {
+		s.onJournalBump(s.profile.ID)
 	}
 	if p := s.ensurePager(); p != nil {
 		p.InvalidateWindows(rid)

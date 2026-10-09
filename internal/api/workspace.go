@@ -14,12 +14,13 @@ const workspacePrefix = "/api/v1/workspace/"
 
 // WorkspaceHandler serves GET/PUT workspace state per profile.
 type WorkspaceHandler struct {
-	store *session.WorkspaceStore
+	store   *session.WorkspaceStore
+	onSaved func(profileID string)
 }
 
 // NewWorkspaceHandler returns the workspace persistence handler.
-func NewWorkspaceHandler(store *session.WorkspaceStore) *WorkspaceHandler {
-	return &WorkspaceHandler{store: store}
+func NewWorkspaceHandler(store *session.WorkspaceStore, onSaved func(profileID string)) *WorkspaceHandler {
+	return &WorkspaceHandler{store: store, onSaved: onSaved}
 }
 
 // ServeHTTP implements http.Handler.
@@ -75,6 +76,9 @@ func (h *WorkspaceHandler) put(w http.ResponseWriter, r *http.Request, profileID
 		}
 		writeError(w, http.StatusBadGateway, "workspace_save_failed", "Could not save workspace.", err.Error())
 		return
+	}
+	if h.onSaved != nil {
+		h.onSaved(profileID)
 	}
 	writeJSON(w, st)
 }

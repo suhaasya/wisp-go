@@ -188,6 +188,7 @@ func (s *Session) runScript(ctx context.Context, qid string, confirm bool, stmts
 			return
 		}
 		ev := s.runOneStatement(ctx, qid, confirm, i, total, st)
+		s.recordHistory(st.text, ev)
 		s.emitQueryEvent(ev)
 		if ev.NeedsConfirm || ev.Error != "" {
 			s.emitQueryEvent(QueryRunEvent{QID: qid, Done: true, StmtIndex: i, StmtTotal: total})
@@ -263,6 +264,20 @@ func (s *Session) runOneStatement(ctx context.Context, qid string, confirm bool,
 	}
 	ev.RowsAffected = res.RowsAffected
 	return ev
+}
+
+func (s *Session) recordHistory(sql string, ev QueryRunEvent) {
+	if s.onHistoryRecord == nil {
+		return
+	}
+	status := "ok"
+	if ev.Error != "" {
+		status = "error"
+	}
+	if ev.Cancelled {
+		status = "cancelled"
+	}
+	s.onHistoryRecord(sql, ev.DurationMs, ev.RowsAffected, status)
 }
 
 func (s *Session) trackQueryRunResult(rid string) {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { referencedTableNames, toSQLNamespace } from "./complete";
+import { mergeSnippetsIntoNamespace, referencedTableNames, toSQLNamespace } from "./complete";
 
 describe("toSQLNamespace", () => {
   it("maps tables and column detail from completion payload", () => {
@@ -18,6 +18,14 @@ describe("toSQLNamespace", () => {
     const orders = (ns as Record<string, Record<string, { detail?: string }>>).orders;
     expect(orders?.id?.detail).toBe("int4");
     expect(orders?.status?.detail).toBe("text");
+  });
+});
+
+describe("mergeSnippetsIntoNamespace", () => {
+  it("adds snippet names with tag detail", () => {
+    const ns = mergeSnippetsIntoNamespace({}, [{ name: "daily_orders", tags: ["report"] }]);
+    const row = (ns as Record<string, { detail?: string }>).daily_orders;
+    expect(row?.detail).toBe("report");
   });
 });
 

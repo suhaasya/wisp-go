@@ -12,13 +12,13 @@ import (
 
 // Change is one staged edit operation from the page.
 type Change struct {
-	Op       string
-	Row      []any
-	Col      string
-	Value    *string
-	Null     bool
-	Original *string
-	OrigNull bool
+	Op       string  `json:"op"`
+	Row      []any   `json:"row,omitempty"`
+	Col      string  `json:"col,omitempty"`
+	Value    *string `json:"value,omitempty"`
+	Null     bool    `json:"null,omitempty"`
+	Original *string `json:"original,omitempty"`
+	OrigNull bool    `json:"origNull,omitempty"`
 }
 
 // ChangeSet holds staged edits for one result.

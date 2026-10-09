@@ -229,6 +229,6 @@ func TestStreamOneMillionRSSBudget(t *testing.T) {
 	}
 	const capMB = 80
 	if rss > capMB {
-		t.Fatalf("RSS %.1f MB exceeds scroll cap %.0f MB", rss, capMB)
+		t.Fatalf("RSS %.1f MB exceeds scroll cap %d MB", rss, capMB)
 	}
 }

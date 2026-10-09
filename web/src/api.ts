@@ -23,7 +23,7 @@ export class ApiError extends Error {
   }
 }
 
-type HelloResponse = {
+export type HelloResponse = {
   version: string;
   csrf: string;
   settings: Record<string, unknown>;

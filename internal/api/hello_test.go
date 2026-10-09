@@ -11,7 +11,9 @@ import (
 
 func TestHelloHandler_returnsVersionCSRFAndSettings(t *testing.T) {
 	t.Parallel()
-	h := api.HelloHandler("1.2.3", func(_ *http.Request) string { return "tok-abc" })
+	h := api.HelloHandler("1.2.3", func(_ *http.Request) string { return "tok-abc" }, func() (map[string]any, error) {
+		return map[string]any{"theme": "system"}, nil
+	})
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/hello", nil)
 	rec := httptest.NewRecorder()
 	h(rec, req)
@@ -25,7 +27,7 @@ func TestHelloHandler_returnsVersionCSRFAndSettings(t *testing.T) {
 	if body.Version != "1.2.3" || body.CSRF != "tok-abc" {
 		t.Fatalf("body = %+v", body)
 	}
-	if body.Settings == nil {
-		t.Fatal("settings missing")
+	if body.Settings["theme"] != "system" {
+		t.Fatalf("settings = %+v", body.Settings)
 	}
 }

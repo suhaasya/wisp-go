@@ -93,11 +93,14 @@ func (g *Guard) CSRF(r *http.Request) string {
 }
 
 // RegisterRoutes mounts bootstrap handlers on mux (inside Guard.Wrap).
-func (g *Guard) RegisterRoutes(mux *http.ServeMux, version string, events http.Handler) {
+func (g *Guard) RegisterRoutes(mux *http.ServeMux, version string, events http.Handler, settings http.Handler, helloSettings api.SettingsSnapshot) {
 	mux.HandleFunc("/auth/exchange", g.handleExchange)
-	mux.Handle("/api/v1/hello", api.HelloHandler(version, g.CSRF))
+	mux.Handle("/api/v1/hello", api.HelloHandler(version, g.CSRF, helloSettings))
 	if events != nil {
 		mux.Handle("/api/v1/events", events)
+	}
+	if settings != nil {
+		mux.Handle("/api/v1/settings", settings)
 	}
 }
 

@@ -66,17 +66,23 @@ func runServer(cfg RunConfig) {
 
 	setLogLevel(cfg.LogLevel)
 
+	if err := paths.EnsureConfig(); err != nil {
+		fmt.Fprintf(os.Stderr, "wisp: %v\n", err)
+		os.Exit(1)
+	}
+
 	startCfg := server.StartConfig{
-		Paths:     runtimePaths(paths),
-		Port:      cfg.Port,
-		Dev:       cfg.Dev,
-		IdleExit:  cfg.IdleExit,
-		LogLevel:  cfg.LogLevel,
-		Version:   version,
-		NoBrowser: cfg.NoBrowser,
-		AppWindow: cfg.AppWindow,
-		AssetFS:   web.DistFS(),
-		RSSSample: bench.RSSMegabytes,
+		Paths:        runtimePaths(paths),
+		Port:         cfg.Port,
+		Dev:          cfg.Dev,
+		IdleExit:     cfg.IdleExit,
+		LogLevel:     cfg.LogLevel,
+		Version:      version,
+		NoBrowser:    cfg.NoBrowser,
+		AppWindow:    cfg.AppWindow,
+		AssetFS:      web.DistFS(),
+		RSSSample:    bench.RSSMegabytes,
+		SettingsPath: paths.SettingsJSON(),
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

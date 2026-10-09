@@ -1,3 +1,4 @@
+import { applySettings, type WispSettings } from "./settings";
 import { goMemoryMB, wispStopped } from "./state";
 
 const maxBackoffMs = 20_000;
@@ -27,9 +28,9 @@ function scheduleReconnect(): void {
 }
 
 function handleMessage(raw: string): void {
-  let parsed: { type?: string; data?: { go_mb?: number } };
+  let parsed: { type?: string; data?: { go_mb?: number } & WispSettings };
   try {
-    parsed = JSON.parse(raw) as { type?: string; data?: { go_mb?: number } };
+    parsed = JSON.parse(raw) as { type?: string; data?: { go_mb?: number } & WispSettings };
   } catch {
     return;
   }
@@ -37,6 +38,11 @@ function handleMessage(raw: string): void {
     case "memory":
       if (typeof parsed.data?.go_mb === "number") {
         goMemoryMB.value = parsed.data.go_mb;
+      }
+      break;
+    case "settings":
+      if (parsed.data) {
+        applySettings(parsed.data);
       }
       break;
     case "shutdown":

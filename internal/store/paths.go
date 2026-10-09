@@ -54,6 +54,19 @@ func (p Paths) HandoffSecret() string {
 	return filepath.Join(p.RuntimeDir, "handoff.secret")
 }
 
+// SettingsJSON is the persisted preferences file.
+func (p Paths) SettingsJSON() string {
+	return filepath.Join(p.ConfigDir, "settings.json")
+}
+
+// EnsureConfig creates config (and parent) directories with restrictive permissions.
+func (p Paths) EnsureConfig() error {
+	if err := os.MkdirAll(p.ConfigDir, 0o700); err != nil {
+		return err
+	}
+	return nil
+}
+
 // EnsureRuntime creates runtime (and parent) directories with restrictive permissions.
 func (p Paths) EnsureRuntime() error {
 	if err := os.MkdirAll(p.RuntimeDir, 0o700); err != nil {

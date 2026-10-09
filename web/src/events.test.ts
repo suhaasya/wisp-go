@@ -40,6 +40,18 @@ describe("events", () => {
     disconnectEvents();
   });
 
+  it("applies settings from SSE", async () => {
+    const { connectEvents, disconnectEvents } = await import("./events");
+    const { themePreference } = await import("./state");
+    connectEvents();
+    const es = FakeEventSource.instances[0]!;
+    es.onmessage?.({
+      data: JSON.stringify({ type: "settings", data: { theme: "dark", density: "compact" } }),
+    });
+    expect(themePreference.value).toBe("dark");
+    disconnectEvents();
+  });
+
   it("sets wispStopped on shutdown event", async () => {
     const { connectEvents, disconnectEvents } = await import("./events");
     connectEvents();

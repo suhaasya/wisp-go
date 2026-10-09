@@ -18,27 +18,18 @@ make test
 make build
 ```
 
-## CI
+## CI (GitHub Actions disabled)
 
-Every pull request and every push to `main` runs two required workflows:
+GitHub Actions workflows are **turned off** for now (stored under `.github/workflows.disabled/` to save Actions minutes). Run the same checks locally before you push:
 
-| Workflow | Purpose |
+| Check | Command |
 | --- | --- |
-| **ci** | Lint (`make lint`, `govulncheck`, `npm audit`), tests on Ubuntu/macOS/Windows (`go test`, `-race` on Linux), cross-compiled binaries for all five release targets |
-| **gate** | Budget gate (`make size`, `make bench`, `make gate`) on Linux; size/bench on macOS and Windows |
+| Lint + unit tests | `make lint` and `make test` |
+| Size / memory budgets | `make size bench gate` (Docker for full gate) |
 
-Download built binaries from the **ci** workflow run → Artifacts → **wisp-binaries** (darwin arm64/amd64, linux amd64/arm64, windows amd64).
+To turn CI back on later, move the YAML files into `.github/workflows/` — see `.github/workflows.disabled/README.md`.
 
-Bench output is under the **gate** workflow artifact **bench-results**.
-
-### Branch protection (repository settings)
-
-Configure GitHub branch protection on `main` so that:
-
-1. Required status checks **ci** and **gate** are green before merge.
-2. At least **one approving review** is required.
-
-With that setup, a PR that fails lint, vet, tests, vuln scan, or budget caps cannot be merged.
+If branch protection on `main` still requires **ci** or **gate** status checks, remove those required checks in GitHub repo settings until workflows are re-enabled.
 
 ## Workflow
 

@@ -17,8 +17,8 @@ func TestWorkspaceHandlerPutGet(t *testing.T) {
 	paths := store.PathsFromDirs(dir, dir)
 	_ = paths.EnsureConfig()
 	ps := store.NewProfileStore(paths.ConnectionsJSON())
-	_, err := ps.Create(store.Profile{
-		ID: "p1", Name: "Local", Engine: "postgres", Env: "local", PasswordMode: "none",
+	created, err := ps.Create(store.Profile{
+		Name: "Local", Engine: "postgres", Env: "local", PasswordMode: "none",
 		Transport: store.Transport{Kind: "tcp", Host: "127.0.0.1", Port: 5432},
 	})
 	if err != nil {
@@ -26,13 +26,14 @@ func TestWorkspaceHandlerPutGet(t *testing.T) {
 	}
 	ws := session.NewWorkspaceStore(paths, ps)
 	h := api.NewWorkspaceHandler(ws)
+	profileID := created.ID
 
 	payload, _ := json.Marshal(session.WorkspaceState{
 		Version: 1, ActiveTabID: "t1",
 		Tabs: []session.WorkspaceTabState{{ID: "t1", Kind: session.TabKindQuery, QueryText: "select 2"}},
 	})
 	rec := httptest.NewRecorder()
-	put := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/v1/workspace/p1", bytes.NewReader(payload))
+	put := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/v1/workspace/"+profileID, bytes.NewReader(payload))
 	put.Header.Set("Content-Type", "application/json")
 	h.ServeHTTP(rec, put)
 	if rec.Code != http.StatusOK {
@@ -40,7 +41,7 @@ func TestWorkspaceHandlerPutGet(t *testing.T) {
 	}
 
 	rec = httptest.NewRecorder()
-	h.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/workspace/p1", nil))
+	h.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/workspace/"+profileID, nil))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("get=%d", rec.Code)
 	}

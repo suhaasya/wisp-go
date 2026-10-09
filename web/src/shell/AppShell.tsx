@@ -2,6 +2,7 @@ import { useEffect, useState } from "preact/hooks";
 import type { ComponentType } from "preact";
 import { route, startRouter, stopRouter } from "../router";
 import { RouteScreen } from "../screens/RouteScreen";
+import { handleGlobalKeydown } from "../keydispatch";
 import { sessionEnded, wispStopped } from "../state";
 import { ToastViewport } from "../ui/Toast";
 import { StatusBar } from "./StatusBar";
@@ -29,10 +30,23 @@ function StoppedBanner() {
 
 export function AppShell() {
   const [Gallery, setGallery] = useState<ComponentType | null>(null);
+  const [Palette, setPalette] = useState<ComponentType | null>(null);
+  const [ShortcutHelp, setShortcutHelp] = useState<ComponentType | null>(null);
 
   useEffect(() => {
     startRouter();
     return () => stopRouter();
+  }, []);
+
+  useEffect(() => {
+    void import("../palette/index").then((mod) => setPalette(() => mod.CommandPalette));
+    void import("../shortcut-help").then((mod) => setShortcutHelp(() => mod.ShortcutHelpOverlay));
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => handleGlobalKeydown(e);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
   }, []);
 
   useEffect(() => {
@@ -72,6 +86,8 @@ export function AppShell() {
       </main>
       <StatusBar />
       <ToastViewport />
+      {Palette ? <Palette /> : null}
+      {ShortcutHelp ? <ShortcutHelp /> : null}
     </div>
   );
 }

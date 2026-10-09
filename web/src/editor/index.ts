@@ -19,7 +19,7 @@ import {
 } from "./complete";
 import { readCspNonce } from "./csp";
 import { wispEditorKeymap } from "./keymap";
-import { runKeymapExtension, type RunKeymapHandlers } from "./run-keymap";
+import { runKeymapExtension, type RunKeymapBindings, type RunKeymapHandlers } from "./run-keymap";
 import { applyRunError, clearRunError, runErrorExtension } from "./run-error";
 import { wispEditorTheme } from "./theme";
 
@@ -34,6 +34,7 @@ export type MountSqlEditorOptions = {
   snippets?: SnippetCompletionDTO[];
   onChange: (value: string) => void;
   runKeys?: RunKeymapHandlers;
+  runKeyBindings?: RunKeymapBindings;
 };
 
 export type SqlEditorHandle = {
@@ -92,7 +93,7 @@ export function mountSqlEditor(opts: MountSqlEditorOptions): SqlEditorHandle {
     wispEditorTheme(),
     wispEditorKeymap(),
     runErrorExtension(),
-    ...(opts.runKeys ? [runKeymapExtension(opts.runKeys)] : []),
+    ...(opts.runKeys ? [runKeymapExtension(opts.runKeys, opts.runKeyBindings)] : []),
     completionCompartment.of(sqlExtension()),
     EditorView.updateListener.of((u) => {
       if (u.docChanged) {

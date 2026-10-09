@@ -120,6 +120,25 @@ function LazyGridBench() {
   );
 }
 
+function LazySettingsScreen() {
+  const [Screen, setScreen] = useState<ComponentType | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    import("./settings").then((mod) => {
+      if (!cancelled) {
+        setScreen(() => mod.SettingsScreen);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (!Screen) {
+    return <div class="flex flex-1 bg-canvas" aria-busy="true" />;
+  }
+  return <Screen />;
+}
+
 function LazyConnectionsScreen() {
   const [Screen, setScreen] = useState<ComponentType | null>(null);
   useEffect(() => {
@@ -142,6 +161,9 @@ function LazyConnectionsScreen() {
 export function RouteScreen({ route: r }: { route: Route }) {
   let screen: ComponentChild;
   switch (r.name) {
+    case "settings":
+      screen = <LazySettingsScreen />;
+      break;
     case "connections":
       screen = <LazyConnectionsScreen />;
       break;

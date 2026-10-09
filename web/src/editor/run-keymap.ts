@@ -6,24 +6,33 @@ export type RunKeymapHandlers = {
   onCancel: () => void;
 };
 
-export function runKeymapExtension(handlers: RunKeymapHandlers) {
+export type RunKeymapBindings = {
+  runStatement?: string;
+  runAll?: string;
+  cancel?: string;
+};
+
+export function runKeymapExtension(handlers: RunKeymapHandlers, bindings?: RunKeymapBindings) {
+  const runStatement = bindings?.runStatement ?? "Mod-Enter";
+  const runAll = bindings?.runAll ?? "Shift-Mod-Enter";
+  const cancel = bindings?.cancel ?? "Escape";
   return keymap.of([
     {
-      key: "Mod-Enter",
+      key: runStatement,
       run: () => {
         handlers.onRunStatement();
         return true;
       },
     },
     {
-      key: "Shift-Mod-Enter",
+      key: runAll,
       run: () => {
         handlers.onRunAll();
         return true;
       },
     },
     {
-      key: "Escape",
+      key: cancel,
       run: () => {
         handlers.onCancel();
         return true;

@@ -7,6 +7,9 @@ import {
   referencedTableNames,
   type CompletionSchemaDTO,
 } from "../editor/complete";
+import { registerQueryKeyRunners } from "../keydispatch";
+import { editorRunKeyBindings, formatBindingDisplay, resolveKeybindings } from "../keys";
+import { getSettings } from "../settings";
 import { readOnly, sessionEngine, workspaceProfileId } from "../state";
 import { HistoryDrawer } from "./history-drawer";
 import { fetchSnippets, saveSnippet } from "./snippets-client";
@@ -27,13 +30,6 @@ type QueryTab = Extract<WorkspaceTab, { kind: "query" }>;
 function activeSchemaName(profileId: string): string {
   const ui = loadSidebarUiState(profileId);
   return ui.selectedSchema || "public";
-}
-
-function runModKbd(): string {
-  if (typeof navigator === "undefined") {
-    return "Ctrl+↵";
-  }
-  return /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? "⌘↵" : "Ctrl+↵";
 }
 
 export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab }) {
@@ -128,6 +124,16 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
     }
   }, [activeQid, sessionId]);
 
+  useEffect(() => {
+    return registerQueryKeyRunners({
+      runStatement: onRunStatement,
+      runAll: onRunAll,
+      cancel: onCancel,
+    });
+  }, [onRunStatement, onRunAll, onCancel]);
+
+  const keybindingsKey = JSON.stringify(getSettings().keybindings ?? {});
+
   const onExplain = useCallback(
     (analyze = false, confirm = false) => {
       const h = handleRef.current;
@@ -188,6 +194,7 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
         if (cancelled || !hostRef.current) {
           return;
         }
+        const resolved = resolveKeybindings(getSettings().keybindings ?? {});
         handleRef.current = mountSqlEditor({
         parent: hostRef.current,
         value: tab.queryText ?? "",
@@ -199,6 +206,7 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
           onRunAll,
           onCancel,
         },
+        runKeyBindings: editorRunKeyBindings(resolved),
         onChange: (value) => {
           sqlTextRef.current = value;
           updateQueryTabText(tab.id, value);
@@ -241,7 +249,7 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
         delete hostRef.current.dataset.editorMounted;
       }
     };
-  }, [sessionId, tab.id, onRunStatement, onRunAll, onCancel]);
+  }, [sessionId, tab.id, onRunStatement, onRunAll, onCancel, keybindingsKey]);
 
   useEffect(() => {
     const off = onQueryEvent((ev) => {
@@ -307,13 +315,17 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
       ? `${activeResult.rowsLabel ?? "—"} · ${activeResult.ms} ms`
       : undefined;
 
+  const runKbd = formatBindingDisplay(
+    resolveKeybindings(getSettings().keybindings ?? {})["run-statement"],
+  );
+
   return (
     <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <div class="toolbar flex shrink-0 items-center gap-2 border-b border-line px-2.5 py-2">
         <Button
           label="Run statement"
           variant="primary"
-          kbd={runModKbd()}
+          kbd={runKbd}
           disabled={running}
           onClick={onRunStatement}
         />

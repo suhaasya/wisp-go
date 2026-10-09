@@ -14,33 +14,38 @@ import { StructureTab } from "./structure";
 import { QueryTab } from "./QueryTab";
 import { SchemaSidebar } from "./sidebar";
 import {
-  activateTabAtIndex,
   activateWorkspaceTab,
-  closeActiveTab,
   closeWorkspaceTab,
-  newQueryTab,
   openWorkspaceTableTab,
   reorderWorkspaceTabs,
   tabTitle,
   togglePinTab,
 } from "./tabs";
+import { paletteHandlers } from "../palette/handlers";
+import { openWorkspaceSnippet } from "./snippet-open";
 import { applyWorkspaceSnapshot, fetchWorkspace, scheduleWorkspaceSave } from "./workspace-client";
 
 export type WorkspaceShellProps = {
   sessionId: string;
 };
 
-function isAppDisplayMode(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia("(display-mode: standalone)").matches
-  );
-}
-
 export function WorkspaceShell({ sessionId }: WorkspaceShellProps) {
   useEffect(() => {
     currentSession.value = sessionId;
   }, [sessionId]);
+
+  useEffect(() => {
+    paletteHandlers.openTable = (schema, table) => {
+      openWorkspaceTableTab({ schema, table, mode: "data" });
+    };
+    paletteHandlers.openSnippet = (snippetId) => {
+      void openWorkspaceSnippet(snippetId);
+    };
+    return () => {
+      paletteHandlers.openTable = undefined;
+      paletteHandlers.openSnippet = undefined;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,37 +99,6 @@ export function WorkspaceShell({ sessionId }: WorkspaceShellProps) {
       }
     });
   }, [profileId]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!e.altKey || e.metaKey || e.ctrlKey) {
-        if (isAppDisplayMode() && e.ctrlKey && e.key === "Tab") {
-          e.preventDefault();
-          cycleTabs(e.shiftKey ? -1 : 1);
-        }
-        return;
-      }
-      const k = e.key.toLowerCase();
-      if (k === "t") {
-        e.preventDefault();
-        const tab = newQueryTab();
-        workspaceTabs.value = [...workspaceTabs.value, tab];
-        activateWorkspaceTab(tab.id);
-        return;
-      }
-      if (k === "w") {
-        e.preventDefault();
-        closeActiveTab();
-        return;
-      }
-      if (k >= "1" && k <= "9") {
-        e.preventDefault();
-        activateTabAtIndex(Number(k) - 1);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
 
   const tabs = workspaceTabs.value;
   const activeId = activeWorkspaceTabId.value;
@@ -226,16 +200,6 @@ export function WorkspaceShell({ sessionId }: WorkspaceShellProps) {
       </div>
     </div>
   );
-}
-
-function cycleTabs(delta: number): void {
-  const tabs = workspaceTabs.value;
-  if (tabs.length === 0) {
-    return;
-  }
-  const cur = tabs.findIndex((t) => t.id === activeWorkspaceTabId.value);
-  const next = (cur + delta + tabs.length) % tabs.length;
-  activateWorkspaceTab(tabs[next]!.id);
 }
 
 export { openWorkspaceTableTab };

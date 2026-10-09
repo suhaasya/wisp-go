@@ -31,6 +31,15 @@ export function newQueryTab(): WorkspaceTab {
   };
 }
 
+export function openQueryTabWithText(queryText: string): void {
+  const tab = newQueryTab();
+  workspaceTabs.value = [
+    ...workspaceTabs.value,
+    { ...tab, kind: "query" as const, queryText },
+  ];
+  activateWorkspaceTab(tab.id);
+}
+
 export function openFilteredTableTab(
   schema: string,
   table: string,

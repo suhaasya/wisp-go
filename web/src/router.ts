@@ -9,7 +9,8 @@ export type Route =
   | { name: "bench-grid" }
   | { name: "bench-workspace-tabs" }
   | { name: "bench-query-editor" }
-  | { name: "bench-query-complete" };
+  | { name: "bench-query-complete" }
+  | { name: "settings" };
 
 function initialRoute(): Route {
   if (typeof location === "undefined") {
@@ -36,6 +37,9 @@ export function parseRoute(hash: string): Route {
   }
   if (path === "/bench/query-complete") {
     return { name: "bench-query-complete" };
+  }
+  if (path === "/settings") {
+    return { name: "settings" };
   }
   if (path === "/connections") {
     return { name: "connections" };

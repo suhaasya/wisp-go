@@ -193,11 +193,6 @@ export function ConnectionsScreen({
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.altKey && e.key.toLowerCase() === "n") {
-        e.preventDefault();
-        navigate("/connections/new");
-        return;
-      }
       if (!flatIds.length || menu || deleteTarget || moveTarget) {
         return;
       }
@@ -268,6 +263,7 @@ export function ConnectionsScreen({
             kbd="Alt+N"
             onClick={() => navigate("/connections/new")}
           />
+          <Button label="Settings" variant="ghost" onClick={() => navigate("/settings")} />
           <span title="Coming in v1.1">
             <Button label="Import" disabled />
           </span>

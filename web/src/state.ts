@@ -36,6 +36,12 @@ export const stagedChangeCount = signal(0);
 export const shellConnection = signal<ShellConnection | null>(null);
 export const sessionEngine = signal<string>("postgres");
 export const workspaceProfileId = signal<string | null>(null);
+export const paletteOpen = signal(false);
+export const shortcutHelpOpen = signal(false);
+
+export function openCommandPalette(): void {
+  paletteOpen.value = true;
+}
 
 export type TableFilterCondition = {
   column: string;

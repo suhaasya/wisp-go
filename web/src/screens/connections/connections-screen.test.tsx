@@ -1,7 +1,9 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ConnectionProfile } from "../../connections";
+import { handleGlobalKeydown } from "../../keydispatch";
 import * as router from "../../router";
+import { route } from "../../router";
 import { ConnectionsScreen } from "./index";
 
 const sample: ConnectionProfile[] = [
@@ -71,8 +73,16 @@ describe("ConnectionsScreen", () => {
   });
 
   it("Alt+N navigates to new connection form", () => {
+    route.value = { name: "connections" };
     render(<ConnectionsScreen initialProfiles={sample} />);
-    fireEvent.keyDown(document, { key: "n", altKey: true });
+    handleGlobalKeydown({
+      key: "n",
+      altKey: true,
+      metaKey: false,
+      ctrlKey: false,
+      shiftKey: false,
+      preventDefault: () => {},
+    } as KeyboardEvent);
     expect(location.hash).toBe("#/connections/new");
   });
 

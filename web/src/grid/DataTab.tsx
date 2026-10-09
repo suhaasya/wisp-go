@@ -1,4 +1,5 @@
 import { useEffect, useState } from "preact/hooks";
+import { registerActionRunner } from "../actions";
 import { readOnly, shellConnection, stagedChangeCount, type TableSortKey } from "../state";
 import { pkRowValues } from "../grid/edit";
 import {
@@ -76,6 +77,19 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
   }, [stagedCount]);
 
   useEffect(() => {
+    const unsubs = [
+      registerActionRunner("export-data", () => setExportOpen(true)),
+      registerActionRunner("import-data", () => setImportOpen(true)),
+      registerActionRunner("review-sql", () => void openReview()),
+      registerActionRunner("discard-changes", () => void onDiscard()),
+      registerActionRunner("add-row", () => void onAddRow()),
+      registerActionRunner("duplicate-row", () => void onDuplicateRow()),
+      registerActionRunner("delete-row", () => void onDeleteRow()),
+    ];
+    return () => unsubs.forEach((u) => u());
+  }, [sessionId, open?.rid, stagedCount, selection, gridAccess]);
+
+  useEffect(() => {
     setStagedCount(0);
   }, [open?.rid]);
 
@@ -108,17 +122,6 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
       }
     });
   }, [fileExportId]);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
-        e.preventDefault();
-        void openReview();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [sessionId, open?.rid, stagedCount]);
 
   useEffect(() => {
     setSortDraft(applied.sort);
@@ -332,17 +335,7 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
           Inline editing requires a primary or unique key on this table.
         </p>
       ) : null}
-      <DataToolbar
-        stagedCount={stagedCount}
-        disabled={!editable}
-        onAddRow={() => void onAddRow()}
-        onDuplicateRow={() => void onDuplicateRow()}
-        onDeleteRow={() => void onDeleteRow()}
-        onDiscard={() => void onDiscard()}
-        onReviewSQL={() => void openReview()}
-        onExport={() => setExportOpen(true)}
-        onImport={() => setImportOpen(true)}
-      />
+      <DataToolbar stagedCount={stagedCount} disabled={!editable} />
       <FilterBar
         columns={open.columns}
         applied={applied}

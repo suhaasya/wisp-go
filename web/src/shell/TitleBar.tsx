@@ -1,4 +1,7 @@
-import { shellConnection } from "../state";
+import { formatBindingDisplay, resolveKeybindings } from "../keys";
+import { getSettings } from "../settings";
+import { navigate } from "../router";
+import { openCommandPalette, shellConnection } from "../state";
 import { Button } from "../ui/Button";
 import { cx } from "../ui/cx";
 
@@ -40,8 +43,15 @@ export function TitleBar() {
           <span class="font-semibold text-ink">Wisp</span>
         )}
       </div>
-      <div class="ml-auto shrink-0">
-        <Button label="Command palette" variant="ghost" size="sm" kbd="⌘K" disabled />
+      <div class="ml-auto flex shrink-0 items-center gap-1">
+        <Button label="Settings" variant="ghost" size="sm" onClick={() => navigate("/settings")} />
+        <Button
+          label="Command palette"
+          variant="ghost"
+          size="sm"
+          kbd={formatBindingDisplay(resolveKeybindings(getSettings().keybindings ?? {})["command-palette"])}
+          onClick={() => openCommandPalette()}
+        />
       </div>
     </header>
   );

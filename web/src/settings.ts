@@ -25,13 +25,17 @@ export function getSettings(): WispSettings {
 }
 
 export function applySettings(doc: WispSettings): void {
-  cached = { ...doc };
-  settingsSignal.value = doc;
+  const density = doc.density === "comfortable" ? "comfortable" : "compact";
+  cached = {
+    ...doc,
+    density,
+    row_height: density === "comfortable" ? "comfortable" : "compact",
+  };
+  settingsSignal.value = cached;
   const theme = doc.theme;
   if (theme === "light" || theme === "dark" || theme === "system") {
     setThemePreference(theme);
   }
-  const density = doc.density === "comfortable" ? "comfortable" : "compact";
   document.documentElement.setAttribute("data-density", density);
 }
 

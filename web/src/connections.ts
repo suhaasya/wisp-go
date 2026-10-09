@@ -13,7 +13,13 @@ export type ConnectionProfile = {
   user: string;
   database: string;
   password_mode: string;
-  ssl: { mode: string };
+  ssl: {
+    mode: string;
+    ca_source?: string;
+    ca_file?: string;
+    client_cert?: string;
+    client_key?: string;
+  };
   ssh?: { host: string; port: number; user: string; key_path: string };
   env: ProfileEnv;
   read_only: boolean;

@@ -18,6 +18,7 @@ import { Tabs } from "../../ui/Tabs";
 import { pushToast } from "../../ui/Toast";
 import { AdvancedTab } from "./advanced";
 import { GeneralTab } from "./general";
+import { SslTab } from "./ssl";
 import { TestResultLine } from "./test-result";
 import { looksLikeConnectionURL, parseConnectionURL, takeImportDraft } from "../connections/paste";
 
@@ -31,10 +32,11 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
   const [hasStoredPassword, setHasStoredPassword] = useState(false);
   const [testState, setTestState] = useState<{
     running?: boolean;
-    ok?: { latencyMs: number; server: string };
+    ok?: { latencyMs: number; server: string; tls?: string };
     error?: string;
   }>({});
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerField, setPickerField] = useState<"caFile" | "clientCert" | "clientKey" | null>(null);
   const testAbort = useRef<AbortController | null>(null);
   const [pasteURL, setPasteURL] = useState("");
 
@@ -77,13 +79,15 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
     setTestState({ running: true });
     try {
       const body = buildTestRequest(form, hasStoredPassword);
-      const out = await request<{ ok: boolean; latency_ms: number; server: string }>(
+      const out = await request<{ ok: boolean; latency_ms: number; server: string; tls?: string }>(
         "POST",
         "/api/v1/connections/test",
         body,
         { signal: ac.signal },
       );
-      setTestState({ ok: { latencyMs: out.latency_ms, server: out.server } });
+      setTestState({
+        ok: { latencyMs: out.latency_ms, server: out.server, tls: out.tls },
+      });
     } catch (e) {
       if (ac.signal.aborted) {
         return;
@@ -172,11 +176,21 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
           ]}
         />
         {tab === "general" ? <GeneralTab form={form} errors={errors} onChange={setForm} /> : null}
+        {tab === "ssl" ? (
+          <SslTab
+            form={form}
+            onChange={setForm}
+            onBrowseFile={(field) => {
+              setPickerField(field);
+              setPickerOpen(true);
+            }}
+          />
+        ) : null}
         {tab === "advanced" ? (
           <AdvancedTab form={form} onChange={setForm} onBrowseFile={() => setPickerOpen(true)} />
         ) : null}
-        {tab === "ssh" || tab === "ssl" ? (
-          <p class="px-5 py-4 text-13 text-ink-2">Settings for this tab ship in LW-019 and LW-020.</p>
+        {tab === "ssh" ? (
+          <p class="px-5 py-4 text-13 text-ink-2">SSH tunnel settings ship in LW-020.</p>
         ) : null}
         <footer class="flex items-center gap-2 border-t border-line-2 bg-raise px-5 py-3">
           <TestResultLine
@@ -194,7 +208,21 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
           />
         </footer>
       </div>
-      <FilePicker open={pickerOpen} onClose={() => setPickerOpen(false)} onSelect={() => setPickerOpen(false)} />
+      <FilePicker
+        open={pickerOpen}
+        onClose={() => {
+          setPickerOpen(false);
+          setPickerField(null);
+        }}
+        onSelect={(path) => {
+          if (pickerField) {
+            setForm((f) => ({ ...f, ssl: { ...f.ssl, [pickerField]: path } }));
+          }
+          setPickerOpen(false);
+          setPickerField(null);
+        }}
+        filter={(name) => !pickerField || name.includes(".") || name.length > 0}
+      />
     </div>
   );
 }

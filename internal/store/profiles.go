@@ -52,7 +52,11 @@ type Transport struct {
 
 // SSLConfig holds TLS options (no secrets in profile JSON).
 type SSLConfig struct {
-	Mode string `json:"mode"`
+	Mode       string `json:"mode"`
+	CASource   string `json:"ca_source,omitempty"` // system or file
+	CAFile     string `json:"ca_file,omitempty"`
+	ClientCert string `json:"client_cert,omitempty"`
+	ClientKey  string `json:"client_key,omitempty"`
 }
 
 // SSHConfig holds SSH tunnel options (no secrets in profile JSON).

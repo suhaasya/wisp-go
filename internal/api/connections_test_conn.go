@@ -84,6 +84,7 @@ func (h *ConnectionTestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		OK:        true,
 		LatencyMS: latency,
 		Server:    label,
+		TLS:       strings.TrimSpace(info.TLS),
 	})
 }
 

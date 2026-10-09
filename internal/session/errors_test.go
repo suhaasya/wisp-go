@@ -85,6 +85,17 @@ func TestMapConnectionErrorSSH(t *testing.T) {
 	}
 }
 
+func TestMapConnectionErrorTLSHostname(t *testing.T) {
+	err := errors.New("tls: failed to verify certificate: x509: certificate is not valid for any names, but wanted to match db.test")
+	got := session.MapConnectionError(err)
+	if got.Code != "tls_hostname" {
+		t.Fatalf("code=%q", got.Code)
+	}
+	if got.Message != "The server certificate does not match the database hostname." {
+		t.Fatalf("message=%q", got.Message)
+	}
+}
+
 func TestMapConnectionErrorGeneric(t *testing.T) {
 	got := session.MapConnectionError(errors.New("something unexpected"))
 	if got.Code != "connection_failed" {

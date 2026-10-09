@@ -3,16 +3,21 @@ package mysql
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql" // register "mysql" driver
 	mysqldriver "github.com/go-sql-driver/mysql"
 	"github.com/suhaasya/wisp-go/internal/driver"
 )
+
+var mysqlTLSReg atomic.Uint64
 
 // Driver connects to MySQL/MariaDB over TCP.
 type Driver struct{}
@@ -21,7 +26,20 @@ func (Driver) Name() string { return "mysql" }
 
 // Open returns a session-scoped connection (one underlying *sql.Conn).
 func (Driver) Open(ctx context.Context, p driver.ConnectParams) (driver.Conn, error) {
-	dsn, err := buildDSN(p)
+	mode := strings.ToLower(strings.TrimSpace(p.TLS.Mode))
+	if mode == "prefer" {
+		conn, err := openMySQL(ctx, p, true)
+		if err == nil {
+			return conn, nil
+		}
+		return openMySQL(ctx, p, false)
+	}
+	useTLS := mode != "" && mode != "disable"
+	return openMySQL(ctx, p, useTLS)
+}
+
+func openMySQL(ctx context.Context, p driver.ConnectParams, useTLS bool) (driver.Conn, error) {
+	dsn, err := buildDSN(p, useTLS)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +72,7 @@ func (Driver) Open(ctx context.Context, p driver.ConnectParams) (driver.Conn, er
 	return c, nil
 }
 
-func buildDSN(p driver.ConnectParams) (string, error) {
+func buildDSN(p driver.ConnectParams, useTLS bool) (string, error) {
 	if p.Host == "" {
 		return "", errors.New("mysql: host required")
 	}
@@ -82,7 +100,29 @@ func buildDSN(p driver.ConnectParams) (string, error) {
 		cfg.ReadTimeout = p.ConnectTimeout
 		cfg.WriteTimeout = p.ConnectTimeout
 	}
+	if useTLS {
+		name, err := registerMySQLTLS(p.TLS)
+		if err != nil {
+			return "", err
+		}
+		cfg.TLSConfig = name
+	}
 	return cfg.FormatDSN(), nil
+}
+
+func registerMySQLTLS(p driver.TLSParams) (string, error) {
+	tlsCfg, err := driver.ClientTLSConfig(p)
+	if err != nil {
+		return "", err
+	}
+	if tlsCfg == nil {
+		return "", nil
+	}
+	name := fmt.Sprintf("wisp-%d", mysqlTLSReg.Add(1))
+	if err := mysqldriver.RegisterTLSConfig(name, tlsCfg); err != nil {
+		return "", err
+	}
+	return name, nil
 }
 
 type sqlConn struct {
@@ -135,7 +175,67 @@ func (c *sqlConn) ServerInfo(ctx context.Context) (driver.ServerInfo, error) {
 		Engine:   c.dialect.engine,
 		Database: db,
 		User:     user,
+		TLS:      c.tlsStatus(ctx),
 	}, nil
+}
+
+func (c *sqlConn) tlsStatus(ctx context.Context) string {
+	var out tls.ConnectionState
+	var ok bool
+	_ = c.conn.Raw(func(dc any) error {
+		out, ok = mysqlTLSState(dc)
+		return nil
+	})
+	if !ok || !out.HandshakeComplete {
+		return c.tlsFromShow(ctx)
+	}
+	return driver.FormatTLSLine(&out)
+}
+
+func mysqlTLSState(dc any) (tls.ConnectionState, bool) {
+	v := reflect.ValueOf(dc)
+	if !v.IsValid() {
+		return tls.ConnectionState{}, false
+	}
+	m := v.MethodByName("TLSConnectionState")
+	if !m.IsValid() {
+		return tls.ConnectionState{}, false
+	}
+	res := m.Call(nil)
+	if len(res) != 2 {
+		return tls.ConnectionState{}, false
+	}
+	st, _ := res[0].Interface().(tls.ConnectionState)
+	ok, _ := res[1].Interface().(bool)
+	return st, ok
+}
+
+func (c *sqlConn) tlsFromShow(ctx context.Context) string {
+	rows, err := c.conn.QueryContext(ctx, "SHOW SESSION STATUS WHERE Variable_name IN ('Ssl_version','Ssl_cipher')")
+	if err != nil {
+		return ""
+	}
+	defer func() { _ = rows.Close() }()
+	var version, cipher string
+	for rows.Next() {
+		var name, val string
+		if err := rows.Scan(&name, &val); err != nil {
+			return ""
+		}
+		switch name {
+		case "Ssl_version":
+			version = val
+		case "Ssl_cipher":
+			cipher = val
+		}
+	}
+	if version == "" {
+		return ""
+	}
+	if cipher == "" {
+		return version
+	}
+	return version + ", " + cipher
 }
 
 func (c *sqlConn) Exec(ctx context.Context, sqlText string, args ...any) (driver.ExecResult, error) {

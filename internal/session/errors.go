@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"crypto/x509"
 	"errors"
 	"net"
 	"strings"
@@ -107,6 +108,21 @@ func MapConnectionError(err error) ConnectionError {
 		return ConnectionError{
 			Code:    "ssh_failed",
 			Message: "SSH tunnel failed.",
+			Detail:  err.Error(),
+		}
+	}
+	var hostErr x509.HostnameError
+	if errors.As(err, &hostErr) {
+		return ConnectionError{
+			Code:    "tls_hostname",
+			Message: "The server certificate does not match the database hostname.",
+			Detail:  err.Error(),
+		}
+	}
+	if strings.Contains(low, "wanted to match") || strings.Contains(low, "not valid for any names") {
+		return ConnectionError{
+			Code:    "tls_hostname",
+			Message: "The server certificate does not match the database hostname.",
 			Detail:  err.Error(),
 		}
 	}

@@ -20,6 +20,7 @@ func TestConnect(ctx context.Context, p store.Profile, password []byte) (driver.
 		Password:                password,
 		ConnectTimeout:          10 * time.Second,
 		AllowPublicKeyRetrieval: p.Options.AllowPublicKeyRetrieval,
+		TLS:                     TLSParamsFromProfile(p),
 	}
 	if p.Advanced.StatementTimeoutSec > 0 {
 		params.StatementTimeout = time.Duration(p.Advanced.StatementTimeoutSec) * time.Second

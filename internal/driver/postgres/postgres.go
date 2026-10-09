@@ -21,7 +21,20 @@ func (Driver) Name() string { return "postgres" }
 
 // Open dials PostgreSQL using driver.ConnectParams.
 func (Driver) Open(ctx context.Context, p driver.ConnectParams) (driver.Conn, error) {
-	cfg, err := connConfig(p)
+	mode := strings.ToLower(strings.TrimSpace(p.TLS.Mode))
+	if mode == "prefer" {
+		conn, err := openPostgres(ctx, p, true)
+		if err == nil {
+			return conn, nil
+		}
+		return openPostgres(ctx, p, false)
+	}
+	useTLS := mode != "" && mode != "disable"
+	return openPostgres(ctx, p, useTLS)
+}
+
+func openPostgres(ctx context.Context, p driver.ConnectParams, useTLS bool) (driver.Conn, error) {
+	cfg, err := connConfig(p, useTLS)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +48,7 @@ func (Driver) Open(ctx context.Context, p driver.ConnectParams) (driver.Conn, er
 	return &pgConn{pg: pg, dialect: pgDialect{}}, nil
 }
 
-func connConfig(p driver.ConnectParams) (*pgx.ConnConfig, error) {
+func connConfig(p driver.ConnectParams, useTLS bool) (*pgx.ConnConfig, error) {
 	if p.Host == "" {
 		return nil, errors.New("postgres: host required")
 	}
@@ -69,6 +82,13 @@ func connConfig(p driver.ConnectParams) (*pgx.ConnConfig, error) {
 	if p.PgPassFile != "" && len(p.Password) == 0 {
 		cfg.RuntimeParams["passfile"] = p.PgPassFile
 	}
+	if useTLS {
+		tlsCfg, err := driver.ClientTLSConfig(p.TLS)
+		if err != nil {
+			return nil, err
+		}
+		cfg.TLSConfig = tlsCfg
+	}
 	cfg.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
 	return cfg, nil
 }
@@ -91,11 +111,13 @@ func (c *pgConn) ServerInfo(ctx context.Context) (driver.ServerInfo, error) {
 	if err := c.pg.QueryRow(ctx, "SELECT version(), current_database(), current_user").Scan(&version, &db, &user); err != nil {
 		return driver.ServerInfo{}, err
 	}
+	tlsLine := postgresTLSLine(c.pg)
 	return driver.ServerInfo{
 		Version:  version,
 		Engine:   "postgres",
 		Database: db,
 		User:     user,
+		TLS:      tlsLine,
 	}, nil
 }
 

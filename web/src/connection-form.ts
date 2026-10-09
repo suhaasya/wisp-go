@@ -1,4 +1,7 @@
 import type { ConnectionProfile, ProfileEnv } from "./connections";
+import { defaultSSLForHost, type SSLFormState } from "./connection-form/ssl-helpers";
+
+export type { SSLFormState };
 
 export type FormState = {
   id?: string;
@@ -17,6 +20,7 @@ export type FormState = {
   env: ProfileEnv;
   readOnly: boolean;
   safeMode: boolean;
+  ssl: SSLFormState;
   advanced: {
     defaultSchema: string;
     timeZone: string;
@@ -51,6 +55,7 @@ export function defaultFormState(): FormState {
     env: "local",
     readOnly: false,
     safeMode: false,
+    ssl: defaultSSLForHost("127.0.0.1"),
     advanced: {
       defaultSchema: "",
       timeZone: "",
@@ -69,8 +74,11 @@ export function formFromParseResult(profile: Record<string, unknown>, password: 
 		port: defaultPorts[engine],
 		path: "",
 	};
-	const ssl = (profile.ssl as { mode?: string }) ?? {};
+	const sslRaw = (profile.ssl as ConnectionProfile["ssl"]) ?? { mode: "prefer" };
+	const options = (profile.options as { provider?: string }) ?? {};
+	const host = transport.host ?? "";
 	const advanced = (profile.advanced as Record<string, unknown>) ?? {};
+	const sslDefaults = defaultSSLForHost(host, options.provider);
 	return {
 		name: String(profile.name ?? profile.database ?? ""),
 		folder: String(profile.folder ?? ""),
@@ -87,6 +95,13 @@ export function formFromParseResult(profile: Record<string, unknown>, password: 
 		env: (profile.env as ProfileEnv) ?? "development",
 		readOnly: Boolean(profile.read_only),
 		safeMode: Boolean(profile.safe_mode),
+		ssl: {
+			mode: sslRaw.mode || sslDefaults.mode,
+			caSource: (sslRaw.ca_source as SSLFormState["caSource"]) || sslDefaults.caSource,
+			caFile: sslRaw.ca_file ?? "",
+			clientCert: sslRaw.client_cert ?? "",
+			clientKey: sslRaw.client_key ?? "",
+		},
 		advanced: {
 			defaultSchema: String(advanced.default_schema ?? ""),
 			timeZone: String(advanced.time_zone ?? ""),
@@ -115,6 +130,7 @@ export function formFromProfile(p: ConnectionProfile): FormState {
     env: p.env,
     readOnly: p.read_only,
     safeMode: p.safe_mode,
+    ssl: sslFromProfile(p),
     advanced: {
       defaultSchema: p.advanced?.default_schema ?? "",
       timeZone: p.advanced?.time_zone ?? "",
@@ -167,7 +183,7 @@ export function buildTestRequest(f: FormState, hasStoredPassword: boolean): Test
     user: f.user,
     database: f.database,
     password_mode: f.savePassword ? "keychain" : "none",
-    ssl: { mode: "disable" },
+    ssl: buildSSLPayload(f.ssl),
     env: f.env,
     read_only: f.readOnly,
     safe_mode: f.safeMode,
@@ -184,6 +200,34 @@ export function buildSaveRequest(f: FormState, hasStoredPassword: boolean): Test
   const body = buildTestRequest(f, hasStoredPassword);
   delete body.profile_id;
   return body;
+}
+
+function sslFromProfile(p: ConnectionProfile): SSLFormState {
+  const base = defaultSSLForHost(p.transport.host, p.options.provider);
+  return {
+    mode: p.ssl.mode || base.mode,
+    caSource: (p.ssl.ca_source as SSLFormState["caSource"]) || base.caSource,
+    caFile: p.ssl.ca_file ?? "",
+    clientCert: p.ssl.client_cert ?? "",
+    clientKey: p.ssl.client_key ?? "",
+  };
+}
+
+function buildSSLPayload(ssl: SSLFormState): Record<string, string> {
+  const out: Record<string, string> = { mode: ssl.mode };
+  if (ssl.caSource === "file" && ssl.caFile.trim()) {
+    out.ca_source = "file";
+    out.ca_file = ssl.caFile.trim();
+  } else if (ssl.caSource === "system") {
+    out.ca_source = "system";
+  }
+  if (ssl.clientCert.trim()) {
+    out.client_cert = ssl.clientCert.trim();
+  }
+  if (ssl.clientKey.trim()) {
+    out.client_key = ssl.clientKey.trim();
+  }
+  return out;
 }
 
 function buildAdvancedPayload(f: FormState) {

@@ -3,6 +3,8 @@ package driver
 import (
 	"context"
 	"time"
+
+	"github.com/suhaasya/wisp-go/internal/transport"
 )
 
 // Driver opens database connections for one engine.
@@ -50,7 +52,12 @@ type ConnectParams struct {
 
 	// MySQL/MariaDB (LW-014)
 	AllowPublicKeyRetrieval bool
+
+	TLS TLSParams
 }
+
+// TLSParams mirrors transport TLS settings on ConnectParams.
+type TLSParams = transport.TLSParams
 
 // ServerInfo describes the connected server.
 type ServerInfo struct {
@@ -58,6 +65,7 @@ type ServerInfo struct {
 	Engine   string
 	Database string
 	User     string
+	TLS      string
 }
 
 // ExecResult summarizes a non-query statement.

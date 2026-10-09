@@ -49,6 +49,28 @@ describe("buildTestRequest", () => {
     expect(body.profile_id).toBe("p1");
   });
 
+  it("includes ssl settings from the form", () => {
+    const f = {
+      ...defaultFormState(),
+      name: "n",
+      user: "u",
+      database: "d",
+      ssl: {
+        mode: "verify-full",
+        caSource: "file" as const,
+        caFile: "/tmp/ca.pem",
+        clientCert: "",
+        clientKey: "",
+      },
+    };
+    const body = buildTestRequest(f, false);
+    expect(body.ssl).toEqual({
+      mode: "verify-full",
+      ca_source: "file",
+      ca_file: "/tmp/ca.pem",
+    });
+  });
+
   it("includes password when dirty", () => {
     const f = {
       ...defaultFormState(),

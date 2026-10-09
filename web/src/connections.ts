@@ -73,7 +73,11 @@ export function useMockConnectionData(): boolean {
   if (import.meta.env.VITE_WISP_LIVE_CONNECTIONS === "1") {
     return false;
   }
-  return import.meta.env.MODE === "test" || import.meta.env.DEV;
+  if (import.meta.env.VITE_WISP_MOCK_CONNECTIONS === "1") {
+    return true;
+  }
+  // Vitest only; dev uses the real Go API (see vite proxy + make dev).
+  return import.meta.env.MODE === "test";
 }
 
 export async function loadConnectionProfiles(): Promise<{

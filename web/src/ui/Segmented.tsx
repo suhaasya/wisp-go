@@ -24,9 +24,11 @@ export function Segmented({ options, value, "aria-label": ariaLabel, onChange }:
           key={opt.value}
           type="button"
           class={cx(
-            "border-0 bg-transparent px-[11px] py-1 text-13 text-ink-2",
+            "border-0 px-[11px] py-1 text-13",
             i > 0 && "border-l border-line",
-            value === opt.value && "bg-accent-soft font-medium text-ink",
+            value === opt.value
+              ? "bg-accent-soft font-medium text-ink ring-1 ring-inset ring-accent"
+              : "bg-transparent text-ink-2",
           )}
           aria-pressed={value === opt.value}
           onClick={() => onChange(opt.value)}

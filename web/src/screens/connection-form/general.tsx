@@ -117,9 +117,10 @@ export function GeneralTab({
               aria-pressed={form.env === env}
               onClick={() => set({ env })}
               class={cx(
-                "flex items-center gap-1.5 rounded-full border border-line bg-panel px-2 py-0.5 text-12-5",
-                form.env === env && "font-medium",
-                form.env === env && envRing(env),
+                "flex items-center gap-1.5 rounded-full border bg-panel px-2 py-0.5 text-12-5",
+                form.env === env
+                  ? cx("font-medium text-ink", envSelectedStyle(env))
+                  : "border-line text-ink-2",
               )}
             >
               <span class={cx("h-2 w-2 rounded-full", envDot(env))} />
@@ -143,16 +144,16 @@ export function GeneralTab({
   );
 }
 
-function envRing(env: ProfileEnv): string {
+function envSelectedStyle(env: ProfileEnv): string {
   switch (env) {
     case "local":
-      return "border-env-local";
+      return "border-env-local ring-1 ring-inset ring-env-local";
     case "development":
-      return "border-env-dev";
+      return "border-env-dev ring-1 ring-inset ring-env-dev";
     case "staging":
-      return "border-env-staging";
+      return "border-env-staging ring-1 ring-inset ring-env-staging";
     case "production":
-      return "border-env-prod";
+      return "border-env-prod ring-1 ring-inset ring-env-prod";
   }
 }
 

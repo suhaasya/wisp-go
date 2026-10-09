@@ -339,7 +339,7 @@ export function Grid(props: GridProps) {
   ];
 
   return (
-    <div ref={hostRef} class="flex min-h-0 flex-1 flex-col outline-none" tabIndex={0}>
+    <div ref={hostRef} class="flex min-h-0 min-w-0 flex-1 flex-col outline-none" tabIndex={0}>
       <Menu
         open={menu !== null}
         x={menu?.x ?? 0}
@@ -383,7 +383,7 @@ export function Grid(props: GridProps) {
       <div
         ref={scrollRef}
         data-testid="wisp-grid-scroll"
-        class="gridwrap min-h-0 flex-1 overflow-auto bg-panel"
+        class="gridwrap min-h-0 min-w-0 flex-1 overflow-auto bg-panel"
         role="grid"
       >
         <div class="relative min-h-full min-w-min">

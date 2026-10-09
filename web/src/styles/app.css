@@ -90,6 +90,11 @@
   .grid-row-ins .grid-cell {
     @apply bg-inserted;
   }
+
+  .gridwrap {
+    min-width: 0;
+    min-height: 0;
+  }
 }
 
 @layer base {

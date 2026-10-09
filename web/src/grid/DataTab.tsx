@@ -273,7 +273,7 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
         sortDraft={sortDraft}
         onApply={(query) => handleApply({ ...query, sort: sortDraft })}
       />
-      <div class="flex min-h-0 flex-1 overflow-hidden">
+      <div class="flex min-h-0 min-w-0 flex-1 overflow-hidden">
         <Grid
           sessionId={sessionId}
           rid={open.rid}

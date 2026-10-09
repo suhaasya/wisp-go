@@ -181,9 +181,9 @@ export function DetailPanel(props: DetailPanelProps) {
           const display = showFull && fullJSON ? prettyJSON(fullText) : showFull ? fullText! : preview;
           return (
             <div key={col.name} class="mb-2.5">
-              <label class="mb-0.5 flex justify-between text-11-5 text-ink-2">
-                <span>{col.name}</span>
-                <em class="font-mono text-[10.5px] not-italic text-ink-3">{col.type}</em>
+              <label class="mb-0.5 block text-11-5 text-ink-2">
+                <span class="block truncate font-medium text-ink-2">{col.name}</span>
+                <span class="mt-0.5 block truncate font-mono text-[10.5px] text-ink-3">{col.type}</span>
               </label>
               {showFull && fullJSON ? (
                 <div>

@@ -7,15 +7,28 @@ export type GridColumn = {
   hidden: boolean;
 };
 
-const DEFAULT_WIDTH = 140;
+/** Default column width as a fraction of viewport width (see defaultColumnWidthPx). */
+export const DEFAULT_COLUMN_VW = 0.12;
+
 const MIN_WIDTH = 60;
 const RN_WIDTH = 44;
 
-export function buildColumns(meta: ColumnMeta[]): GridColumn[] {
+export function defaultColumnWidthPx(viewportWidth = 1024): number {
+  const raw = Math.round(viewportWidth * DEFAULT_COLUMN_VW);
+  return clampColumnWidth(raw);
+}
+
+export function buildColumns(meta: ColumnMeta[], viewportWidth?: number): GridColumn[] {
+  const w =
+    viewportWidth !== undefined
+      ? defaultColumnWidthPx(viewportWidth)
+      : typeof window !== "undefined"
+        ? defaultColumnWidthPx(window.innerWidth)
+        : defaultColumnWidthPx(1024);
   return meta.map((m) => ({
     id: m.name,
     meta: m,
-    width: DEFAULT_WIDTH,
+    width: w,
     hidden: false,
   }));
 }

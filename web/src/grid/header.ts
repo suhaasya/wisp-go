@@ -78,8 +78,10 @@ export function createGridHeader(
       const th = document.createElement("div");
       th.className =
         "relative shrink-0 border-r border-line-2 px-2.5 py-1.5 select-none";
+      th.style.flex = `0 0 ${col.width}px`;
       th.style.width = `${col.width}px`;
       th.style.minWidth = `${col.width}px`;
+      th.style.maxWidth = `${col.width}px`;
       th.dataset.colId = col.id;
       th.draggable = true;
 

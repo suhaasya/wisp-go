@@ -211,8 +211,10 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
     cell.replaceChildren();
     cell.className =
       "grid-cell shrink-0 overflow-hidden text-ellipsis whitespace-nowrap border-r border-line-2 px-2.5 font-mono text-12-5 text-ink";
+    cell.style.flex = `0 0 ${col.width}px`;
     cell.style.width = `${col.width}px`;
     cell.style.minWidth = `${col.width}px`;
+    cell.style.maxWidth = `${col.width}px`;
     if (isNumericType(col.meta.type)) {
       cell.classList.add("text-right");
     }

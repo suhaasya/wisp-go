@@ -162,6 +162,11 @@ func (m *Manager) AdoptSession(s *Session) {
 			})
 		}
 	}
+	if s.connector == nil {
+		m.mu.Lock()
+		s.connector = m.connector
+		m.mu.Unlock()
+	}
 	m.mu.Lock()
 	m.sessions[s.ID()] = s
 	m.mu.Unlock()

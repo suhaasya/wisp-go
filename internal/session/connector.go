@@ -15,14 +15,15 @@ type DefaultConnector struct{}
 
 func (DefaultConnector) Connect(ctx context.Context, p store.Profile, password []byte, sshSec SSHConnectSecrets) (driver.Conn, driver.ServerInfo, func(), error) {
 	params := driver.ConnectParams{
-		Host:                    p.Transport.Host,
-		Port:                    p.Transport.Port,
 		DB:                      p.Database,
 		User:                    p.User,
 		Password:                password,
 		ConnectTimeout:          10 * time.Second,
 		AllowPublicKeyRetrieval: p.Options.AllowPublicKeyRetrieval,
 		TLS:                     TLSParamsFromProfile(p),
+	}
+	if err := driver.ApplyProfileTransport(&params, p.Engine, p.Transport.Kind, p.Transport.Host, p.Transport.Path, p.Transport.Port); err != nil {
+		return nil, driver.ServerInfo{}, func() {}, err
 	}
 	if p.Advanced.StatementTimeoutSec > 0 {
 		params.StatementTimeout = time.Duration(p.Advanced.StatementTimeoutSec) * time.Second

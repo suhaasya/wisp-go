@@ -50,7 +50,7 @@ func openPostgres(ctx context.Context, p driver.ConnectParams, useTLS bool) (dri
 }
 
 func connConfig(p driver.ConnectParams, useTLS bool) (*pgx.ConnConfig, error) {
-	if p.Host == "" {
+	if p.Host == "" && p.TransportKind != "socket" {
 		return nil, errors.New("postgres: host required")
 	}
 	if p.Port == 0 {
@@ -61,10 +61,20 @@ func connConfig(p driver.ConnectParams, useTLS bool) (*pgx.ConnConfig, error) {
 	if len(p.Password) == 0 {
 		userURL = url.User(p.User).String()
 	}
-	connURL := fmt.Sprintf("postgres://%s@%s:%d/%s", userURL, p.Host, p.Port, url.PathEscape(p.DB))
+	var connURL string
+	if p.TransportKind == "socket" || strings.HasPrefix(p.Host, "/") {
+		connURL = fmt.Sprintf("postgres://%s@/%s", userURL, url.PathEscape(p.DB))
+	} else {
+		connURL = fmt.Sprintf("postgres://%s@%s:%d/%s", userURL, p.Host, p.Port, url.PathEscape(p.DB))
+	}
 	cfg, err := pgx.ParseConfig(connURL)
 	if err != nil {
 		return nil, err
+	}
+	if p.TransportKind == "socket" || strings.HasPrefix(p.Host, "/") {
+		cfg.Host = p.Host
+		cfg.Port = uint16(p.Port) //nolint:gosec // G115: validated port range
+		useTLS = false
 	}
 	if cfg.RuntimeParams == nil {
 		cfg.RuntimeParams = map[string]string{}

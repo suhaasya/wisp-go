@@ -39,7 +39,9 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
   }>({});
   const [hostKeyPrompt, setHostKeyPrompt] = useState<HostKeyPrompt | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickerField, setPickerField] = useState<"caFile" | "clientCert" | "clientKey" | null>(null);
+  const [pickerField, setPickerField] = useState<
+    "caFile" | "clientCert" | "clientKey" | "socketPath" | null
+  >(null);
   const testAbort = useRef<AbortController | null>(null);
   const [pasteURL, setPasteURL] = useState("");
 
@@ -207,7 +209,17 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
             { id: "advanced", label: "Advanced" },
           ]}
         />
-        {tab === "general" ? <GeneralTab form={form} errors={errors} onChange={setForm} /> : null}
+        {tab === "general" ? (
+          <GeneralTab
+            form={form}
+            errors={errors}
+            onChange={setForm}
+            onBrowseSocketPath={() => {
+              setPickerField("socketPath");
+              setPickerOpen(true);
+            }}
+          />
+        ) : null}
         {tab === "ssl" ? (
           <SslTab
             form={form}
@@ -254,7 +266,9 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
           setPickerField(null);
         }}
         onSelect={(path) => {
-          if (pickerField) {
+          if (pickerField === "socketPath") {
+            setForm((f) => ({ ...f, socketPath: path }));
+          } else if (pickerField) {
             setForm((f) => ({ ...f, ssl: { ...f.ssl, [pickerField]: path } }));
           } else {
             setForm((f) => ({ ...f, ssh: { ...f.ssh, keyPath: path } }));

@@ -86,6 +86,10 @@ func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				h.serveSchema(w, r, sid, rest)
 				return
 			default:
+				if strings.HasPrefix(rest, "server-tools/") {
+					h.serveServerTools(w, r, sid, strings.TrimPrefix(rest, "server-tools/"))
+					return
+				}
 				if strings.HasPrefix(rest, "ddl/") {
 					h.serveDDL(w, r, sid, strings.TrimPrefix(rest, "ddl/"))
 					return

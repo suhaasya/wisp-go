@@ -10,6 +10,7 @@ import {
   tabMemoryMB,
 } from "../state";
 import { MemoryMeter } from "./MemoryMeter";
+import { tabMemorySupported } from "./tab-memory";
 
 const envDotClass = {
   local: "bg-env-local",
@@ -22,10 +23,12 @@ const goCapMB = 30;
 const tabCapMB = 10;
 
 function sampleTabMemory(): void {
-  const perf = performance as Performance & { memory?: { usedJSHeapSize: number } };
-  if (perf.memory?.usedJSHeapSize) {
-    tabMemoryMB.value = perf.memory.usedJSHeapSize / (1024 * 1024);
+  if (!tabMemorySupported()) {
+    tabMemoryMB.value = null;
+    return;
   }
+  const perf = performance as Performance & { memory: { usedJSHeapSize: number } };
+  tabMemoryMB.value = perf.memory.usedJSHeapSize / (1024 * 1024);
 }
 
 export function StatusBar() {
@@ -59,7 +62,7 @@ export function StatusBar() {
       {goMemoryMB.value !== null ? (
         <MemoryMeter label="Go" mb={goMemoryMB.value} capMB={goCapMB} mono />
       ) : null}
-      {tabMemoryMB.value !== null ? (
+      {tabMemorySupported() && tabMemoryMB.value !== null ? (
         <MemoryMeter label="Tab" mb={tabMemoryMB.value} capMB={tabCapMB} mono />
       ) : null}
     </footer>

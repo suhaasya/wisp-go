@@ -44,6 +44,7 @@ export type GridProps = {
   editable?: boolean;
   primaryKey?: string[];
   onStagedCount?: (count: number) => void;
+  rowTone?: (row: number) => "blocked" | "long_running" | null;
 };
 
 function rowHeightFromSettings(): number {
@@ -213,6 +214,7 @@ export function Grid(props: GridProps) {
         pool?.scheduleLayout();
       },
       overlayKind: (row, col) => buffer.overlayKind(row, col),
+      rowTone: props.rowTone,
       onCellActivate: (row, col, cellEl) => openEditor(row, col, cellEl),
     });
 
@@ -385,6 +387,9 @@ export function Grid(props: GridProps) {
         data-testid="wisp-grid-scroll"
         class="gridwrap min-h-0 min-w-0 flex-1 overflow-auto bg-panel"
         role="grid"
+        aria-label={props.table ? `${props.schema}.${props.table} data` : "Query results"}
+        aria-rowcount={totalRows}
+        aria-colcount={columns.value.length}
       >
         <div class="relative min-h-full min-w-min">
           <div ref={headerMountRef} class="min-w-min" />

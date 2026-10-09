@@ -6,7 +6,7 @@ import {
   workspaceTabs,
   type WorkspaceTab,
 } from "./state";
-import { closeActiveTab, newQueryTab, activateWorkspaceTab } from "./workspace/tabs";
+import { closeActiveTab, newQueryTab, activateWorkspaceTab, openServerToolsTab } from "./workspace/tabs";
 
 export type ActionContext = {
   routeName: string;
@@ -27,6 +27,15 @@ export type ActionDef = {
 const runners = new Map<string, (ctx: ActionContext) => void>();
 
 const defs: ActionDef[] = [
+  {
+    id: "server-tools",
+    title: "Server tools",
+    paletteSection: "actions",
+    when: (ctx) => ctx.routeName === "workspace" && ctx.sessionId !== null,
+    run: () => {
+      openServerToolsTab();
+    },
+  },
   {
     id: "new-query",
     title: "New query tab",

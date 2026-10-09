@@ -33,6 +33,7 @@ var allowedInternalDeps = map[string][]string{
 		modulePath + "/internal/pager",
 		modulePath + "/internal/sqlgen",
 		modulePath + "/internal/store",
+		modulePath + "/internal/transport",
 		modulePath + "/internal/transport/ssh",
 		modulePath + "/internal/driver",
 		modulePath + "/internal/driver/postgres",

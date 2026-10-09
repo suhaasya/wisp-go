@@ -1,3 +1,4 @@
+import { useEffect } from "preact/hooks";
 import { cheatSheetBindings } from "./keydispatch";
 import { shortcutHelpOpen } from "./state";
 
@@ -12,6 +13,17 @@ export function ShortcutHelpOverlay() {
     shortcutHelpOpen.value = false;
   }
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        close();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   return (
     <div
       class="fixed inset-0 z-50 flex items-start justify-center bg-canvas/80 pt-20"
@@ -25,13 +37,9 @@ export function ShortcutHelpOverlay() {
       <div
         class="w-[480px] max-w-[calc(100vw-24px)] overflow-hidden rounded-dialog border border-line bg-panel shadow-lg"
         role="dialog"
+        aria-modal="true"
         aria-label="Keyboard shortcuts"
-        onKeyDown={(e) => {
-          if (e.key === "Escape") {
-            e.preventDefault();
-            close();
-          }
-        }}
+        tabIndex={-1}
       >
         <header class="border-b border-line px-4 py-3">
           <h2 class="text-15 font-semibold text-ink">Keyboard shortcuts</h2>

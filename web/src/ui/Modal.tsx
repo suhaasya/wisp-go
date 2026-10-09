@@ -14,6 +14,7 @@ export interface ModalProps {
 export function Modal({ open, title, description, onClose, children, footer }: ModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
+  const titleId = "wisp-modal-title";
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -52,6 +53,8 @@ export function Modal({ open, title, description, onClose, children, footer }: M
   return (
     <dialog
       ref={dialogRef}
+      aria-labelledby={titleId}
+      aria-modal="true"
       class={cx(
         "fixed inset-0 z-50 m-0 max-h-none max-w-none border-0 bg-transparent p-0",
         "backdrop:bg-ink/30",
@@ -67,7 +70,9 @@ export function Modal({ open, title, description, onClose, children, footer }: M
         role="document"
       >
         <header class="border-b border-line-2 px-[18px] py-3.5">
-          <h2 class="text-15 font-semibold text-ink">{title}</h2>
+          <h2 id={titleId} class="text-15 font-semibold text-ink">
+            {title}
+          </h2>
           {description ? <p class="mt-1 text-12-5 text-ink-2">{description}</p> : null}
         </header>
         {children ? <div class="px-[18px] py-3.5">{children}</div> : null}

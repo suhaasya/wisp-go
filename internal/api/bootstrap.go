@@ -20,6 +20,7 @@ type AppHandlers struct {
 	ConnectionParse http.Handler
 	HostKeyAccept   http.Handler
 	FS              http.Handler
+	DetectLocal     http.Handler
 	Sessions        http.Handler
 	Workspace       http.Handler
 	History         http.Handler
@@ -66,6 +67,7 @@ func NewAppHandlers(settingsPath string, paths store.Paths, probe store.KeyringP
 		ConnectionParse: NewConnectionParseHandler(),
 		HostKeyAccept:   NewHostKeyAcceptHandler(),
 		FS:              fsHandler,
+		DetectLocal:     NewDetectHandler(),
 		Sessions:        NewSessionsHandler(sessionMgr, fsHandler),
 		Workspace: NewWorkspaceHandler(workspaceStore, func(profileID string) {
 			sessionMgr.ScheduleJournal(profileID)

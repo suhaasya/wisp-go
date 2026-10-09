@@ -231,6 +231,8 @@ export function SchemaTree({
       return (
         <button
           type="button"
+          role="treeitem"
+          aria-expanded={row.expanded}
           class="flex w-full items-center gap-1.5 px-1.5 py-1 text-12-5 font-medium text-ink-2"
           onClick={() => toggleGroup(row.id)}
         >
@@ -262,6 +264,7 @@ export function SchemaTree({
     return (
       <button
         type="button"
+        role="treeitem"
         data-object-row={row.name}
         class={cx(
           "flex w-full items-center gap-2 rounded-[5px] py-1 pl-5 pr-1.5 text-12-5 text-ink",
@@ -322,7 +325,13 @@ export function SchemaTree({
   };
 
   return (
-    <div class="flex min-h-0 flex-1 flex-col outline-none" tabIndex={0} onKeyDown={onTreeKeyDown}>
+    <div
+      class="flex min-h-0 flex-1 flex-col outline-none"
+      role="tree"
+      aria-label="Schema objects"
+      tabIndex={0}
+      onKeyDown={onTreeKeyDown}
+    >
       <VirtualList
         class="tree min-h-0 flex-1 px-1.5 py-1.5 text-12-5"
         items={rows}

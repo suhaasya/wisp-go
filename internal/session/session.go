@@ -24,9 +24,12 @@ type Session struct {
 	main driver.Conn
 	meta driver.Conn
 
-	pager     *pager.Manager
-	pagerMain driver.Conn
-	metaCache *metadataCache
+	pager                 *pager.Manager
+	pagerMain             driver.Conn
+	metaPager             *pager.Manager
+	metaPagerConn         driver.Conn
+	serverToolsProcessRID string
+	metaCache             *metadataCache
 
 	changeMu         sync.RWMutex
 	resultChanges    map[string]*resultChanges
@@ -188,6 +191,7 @@ func (s *Session) openMetaLocked() (driver.Conn, error) {
 }
 
 func (s *Session) closeMetaLocked() {
+	s.closeMetaPager()
 	if s.meta != nil {
 		_ = s.meta.Close()
 		s.meta = nil
@@ -195,6 +199,18 @@ func (s *Session) closeMetaLocked() {
 	if s.releaseMetaSSH != nil {
 		s.releaseMetaSSH()
 		s.releaseMetaSSH = nil
+	}
+}
+
+func (s *Session) closeMetaPager() {
+	s.mu.Lock()
+	mp := s.metaPager
+	s.metaPager = nil
+	s.metaPagerConn = nil
+	s.serverToolsProcessRID = ""
+	s.mu.Unlock()
+	if mp != nil {
+		mp.CloseAll()
 	}
 }
 

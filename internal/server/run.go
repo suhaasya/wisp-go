@@ -193,7 +193,7 @@ func registerRoutes(root *http.ServeMux, cfg StartConfig, guard *Guard, secretPa
 	if handlers.CloseSessions != nil {
 		ShutdownHooks.CloseSessions = handlers.CloseSessions
 	}
-	guard.RegisterRoutes(inner, version, hub, handlers.Settings, handlers.Secrets, handlers.Connections, handlers.ConnectionTest, handlers.ConnectionParse, handlers.HostKeyAccept, handlers.Sessions, handlers.Workspace, handlers.History, handlers.Snippets, handlers.FS, handlers.HelloSettings)
+	guard.RegisterRoutes(inner, version, hub, handlers.Settings, handlers.Secrets, handlers.Connections, handlers.ConnectionTest, handlers.ConnectionParse, handlers.HostKeyAccept, handlers.Sessions, handlers.Workspace, handlers.History, handlers.Snippets, handlers.FS, handlers.DetectLocal, handlers.HelloSettings)
 	assetFS := cfg.AssetFS
 	if assetFS == nil {
 		assetFS = emptyFS{}

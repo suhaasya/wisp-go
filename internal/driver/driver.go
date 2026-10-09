@@ -47,6 +47,11 @@ type ConnectParams struct {
 	User  string
 	Extra any // engine-specific; mock.Config for mock driver
 
+	// TransportKind is tcp, socket, or pipe (from profile transport.kind).
+	TransportKind string
+	// TransportPath is the unix socket file or named pipe identifier.
+	TransportPath string
+
 	Password         []byte
 	PgPassFile       string
 	ConnectTimeout   time.Duration

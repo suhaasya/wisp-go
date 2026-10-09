@@ -26,6 +26,7 @@ export type RowPoolOptions = {
   onCellActivate?: (row: number, col: number, cellEl: HTMLDivElement) => void;
   onHorizontalScroll?: (scrollLeft: number, viewportWidth: number) => void;
   overlayKind?: (row: number, col: number) => import("./overlay").CellOverlayKind | null;
+  rowTone?: (row: number) => "blocked" | "long_running" | null;
 };
 
 export type RowPool = {
@@ -310,6 +311,13 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
         rowClass += " grid-row-del";
       } else if (rowKind === "ins") {
         rowClass += " grid-row-ins";
+      } else {
+        const tone = opts.rowTone?.(rowIndex);
+        if (tone === "blocked") {
+          rowClass += " grid-row-blocked";
+        } else if (tone === "long_running") {
+          rowClass += " grid-row-long";
+        }
       }
       rowEl.className = rowClass;
 

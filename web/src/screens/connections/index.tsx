@@ -23,6 +23,7 @@ import { pushToast } from "../../ui/Toast";
 import { ConnectionCard } from "./card";
 import { ConnectionsEmpty } from "./empty";
 import { ConnectionsRail } from "./rail";
+import { LocalDetectRow } from "./detect";
 import { useConnectionPaste } from "./paste";
 
 export type ConnectionsScreenProps = {
@@ -248,6 +249,7 @@ export function ConnectionsScreen({
         onEnv={setActiveEnv}
       />
       <div class="min-h-0 flex-1 overflow-auto px-7 py-[22px]">
+        <LocalDetectRow />
         <div class="mb-1.5 flex flex-wrap items-center gap-2.5">
           <div class="max-w-[360px] min-w-[200px] flex-1">
             <Input

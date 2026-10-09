@@ -4,6 +4,8 @@ import {
   type FormState,
 } from "../../connection-form";
 import type { ProfileEnv } from "../../connections";
+import { isWindowsPlatform } from "../../platform";
+import { Button } from "../../ui/Button";
 import { Checkbox } from "../../ui/Checkbox";
 import { Input } from "../../ui/Input";
 import { Segmented } from "../../ui/Segmented";
@@ -17,16 +19,31 @@ const engines = [
 
 const envs: ProfileEnv[] = ["local", "development", "staging", "production"];
 
+const connectOptions = () => {
+  const opts = [
+    { value: "tcp", label: "Host and port" },
+    { value: "socket", label: "Socket" },
+  ];
+  if (isWindowsPlatform()) {
+    opts.push({ value: "pipe", label: "Named pipe" });
+  }
+  return opts;
+};
+
 export function GeneralTab({
   form,
   errors,
   onChange,
+  onBrowseSocketPath,
 }: {
   form: FormState;
   errors: FieldErrors;
   onChange: (next: FormState) => void;
+  onBrowseSocketPath?: () => void;
 }) {
   const set = (patch: Partial<FormState>) => onChange({ ...form, ...patch });
+
+  const pathLabel = form.transportKind === "pipe" ? "Pipe name or path" : "Socket path";
 
   return (
     <div class="grid grid-cols-6 gap-x-3.5 gap-y-3 px-5 py-4" role="tabpanel">
@@ -50,39 +67,54 @@ export function GeneralTab({
         <span class="mb-1 block text-12-5 font-medium text-ink-2">Connect using</span>
         <Segmented
           aria-label="Connect using"
-          options={[
-            { value: "tcp", label: "Host and port" },
-            { value: "socket", label: "Socket" },
-            { value: "pipe", label: "Named pipe" },
-          ]}
-          value={form.transportKind}
-          onChange={(transportKind) => set({ transportKind: transportKind as FormState["transportKind"] })}
-        />
-        {form.transportKind !== "tcp" ? (
-          <p class="mt-1 text-12-5 text-ink-3">Socket and named pipe support ships in LW-043.</p>
-        ) : null}
-      </div>
-      <div class="col-span-4">
-        <Input
-          label="Host"
-          value={form.host}
-          disabled={form.transportKind !== "tcp"}
-          onInput={(host) => set({ host })}
-        />
-        {errors.host ? <p class="mt-1 text-12-5 text-env-prod">{errors.host}</p> : null}
-      </div>
-      <div class="col-span-2">
-        <Input
-          label="Port"
-          value={String(form.port)}
-          disabled={form.transportKind !== "tcp"}
-          onInput={(v) => {
-            const port = Number.parseInt(v, 10);
-            set({ port: Number.isNaN(port) ? 0 : port, portTouched: true });
+          options={connectOptions()}
+          value={form.transportKind === "pipe" && !isWindowsPlatform() ? "tcp" : form.transportKind}
+          onChange={(transportKind) => {
+            const kind = transportKind as FormState["transportKind"];
+            onChange({ ...form, transportKind: kind });
           }}
         />
-        {errors.port ? <p class="mt-1 text-12-5 text-env-prod">{errors.port}</p> : null}
       </div>
+      {form.transportKind === "tcp" ? (
+        <>
+          <div class="col-span-4">
+            <Input label="Host" value={form.host} onInput={(host) => set({ host })} />
+            {errors.host ? <p class="mt-1 text-12-5 text-env-prod">{errors.host}</p> : null}
+          </div>
+          <div class="col-span-2">
+            <Input
+              label="Port"
+              value={String(form.port)}
+              onInput={(v) => {
+                const port = Number.parseInt(v, 10);
+                set({ port: Number.isNaN(port) ? 0 : port, portTouched: true });
+              }}
+            />
+            {errors.port ? <p class="mt-1 text-12-5 text-env-prod">{errors.port}</p> : null}
+          </div>
+        </>
+      ) : (
+        <div class="col-span-6">
+          <div class="flex gap-2">
+            <div class="min-w-0 flex-1">
+              <Input
+                label={pathLabel}
+                mono
+                value={form.socketPath}
+                onInput={(socketPath) => set({ socketPath })}
+              />
+            </div>
+            {onBrowseSocketPath && form.transportKind === "socket" ? (
+              <div class="flex items-end pb-0.5">
+                <Button label="Browse…" variant="ghost" size="sm" onClick={onBrowseSocketPath} />
+              </div>
+            ) : null}
+          </div>
+          {errors.socketPath ? (
+            <p class="mt-1 text-12-5 text-env-prod">{errors.socketPath}</p>
+          ) : null}
+        </div>
+      )}
       <div class="col-span-2">
         <Input label="User" value={form.user} onInput={(user) => set({ user })} />
         {errors.user ? <p class="mt-1 text-12-5 text-env-prod">{errors.user}</p> : null}

@@ -119,7 +119,7 @@ func (s *Session) replayPendingJournal(rid, schema, table string) {
 
 // ResultWindowJSON returns encoded window bytes for a result.
 func (s *Session) ResultWindowJSON(ctx context.Context, rid string, offset, limit int) ([]byte, error) {
-	p := s.ensurePager()
+	p := s.pagerForRID(rid)
 	if p == nil {
 		return nil, errSessionNotReady
 	}
@@ -147,9 +147,14 @@ func (s *Session) ResultCellValue(ctx context.Context, rid string, row int, col 
 // CloseResult closes one result.
 func (s *Session) CloseResult(rid string) {
 	s.dropResultChanges(rid)
-	if p := s.ensurePager(); p != nil {
+	if p := s.pagerForRID(rid); p != nil {
 		p.Close(rid)
 	}
+	s.mu.Lock()
+	if s.serverToolsProcessRID == rid {
+		s.serverToolsProcessRID = ""
+	}
+	s.mu.Unlock()
 }
 
 func (s *Session) closeResults() {

@@ -31,6 +31,18 @@ describe("validateConnectionForm", () => {
     const err = validateConnectionForm(f);
     expect(err.productionSafe).toBeTruthy();
   });
+
+  it("requires socket path for socket transport", () => {
+    const f = {
+      ...defaultFormState(),
+      name: "local",
+      user: "u",
+      database: "d",
+      transportKind: "socket" as const,
+      socketPath: "",
+    };
+    expect(validateConnectionForm(f).socketPath).toBeTruthy();
+  });
 });
 
 describe("buildTestRequest", () => {

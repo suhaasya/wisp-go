@@ -91,6 +91,14 @@
     @apply bg-inserted;
   }
 
+  .grid-row-blocked .grid-cell {
+    @apply bg-deleted/40;
+  }
+
+  .grid-row-long .grid-cell {
+    @apply bg-env-staging/15;
+  }
+
   .gridwrap {
     min-width: 0;
     min-height: 0;
@@ -101,6 +109,9 @@
   html {
     height: 100%;
     overflow: hidden;
+    font-size: 100%;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
@@ -120,6 +131,17 @@
   :focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 1px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 
   * {

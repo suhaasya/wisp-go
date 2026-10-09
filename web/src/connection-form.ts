@@ -11,6 +11,7 @@ export type FormState = {
   engine: ConnectionProfile["engine"];
   transportKind: "tcp" | "socket" | "pipe";
   host: string;
+  socketPath: string;
   port: number;
   portTouched: boolean;
   user: string;
@@ -47,6 +48,7 @@ export function defaultFormState(): FormState {
     engine: "postgres",
     transportKind: "tcp",
     host: "127.0.0.1",
+    socketPath: "",
     port: 5432,
     portTouched: false,
     user: "",
@@ -88,6 +90,7 @@ export function formFromParseResult(profile: Record<string, unknown>, password: 
 		engine,
 		transportKind: (transport.kind as FormState["transportKind"]) || "tcp",
 		host: transport.host ?? "",
+		socketPath: transport.path ?? (transport.kind !== "tcp" ? transport.host : "") ?? "",
 		port: transport.port || defaultPorts[engine],
 		portTouched: true,
 		user: String(profile.user ?? ""),
@@ -124,6 +127,7 @@ export function formFromProfile(p: ConnectionProfile): FormState {
     engine: p.engine,
     transportKind: (p.transport.kind as FormState["transportKind"]) || "tcp",
     host: p.transport.host,
+    socketPath: p.transport.path || (p.transport.kind !== "tcp" ? p.transport.host : ""),
     port: p.transport.port || defaultPorts[p.engine],
     portTouched: true,
     user: p.user,
@@ -157,6 +161,9 @@ export function validateConnectionForm(f: FormState): FieldErrors {
   if (f.transportKind === "tcp" && (f.port < 1 || f.port > 65535)) {
     err.port = "Port must be 1–65535";
   }
+  if ((f.transportKind === "socket" || f.transportKind === "pipe") && !f.socketPath.trim()) {
+    err.socketPath = "Path is required";
+  }
   if (!f.user.trim()) {
     err.user = "User is required";
   }
@@ -184,7 +191,7 @@ export function buildTestRequest(f: FormState, hasStoredPassword: boolean): Test
     name: f.name,
     folder: f.folder,
     engine: f.engine,
-    transport: { kind: f.transportKind, host: f.host, port: f.port, path: "" },
+    transport: buildTransportPayload(f),
     user: f.user,
     database: f.database,
     password_mode: f.savePassword ? "keychain" : "none",
@@ -208,6 +215,17 @@ export function buildTestRequest(f: FormState, hasStoredPassword: boolean): Test
     body.ssh_password = f.ssh.password;
   }
   return body;
+}
+
+function buildTransportPayload(f: FormState): ConnectionProfile["transport"] {
+  if (f.transportKind === "tcp") {
+    return { kind: "tcp", host: f.host, port: f.port, path: "" };
+  }
+  const path = f.socketPath.trim();
+  if (f.transportKind === "socket") {
+    return { kind: "socket", host: f.host, port: f.port, path };
+  }
+  return { kind: "pipe", host: "", port: 0, path };
 }
 
 export function buildSaveRequest(f: FormState, hasStoredPassword: boolean): TestRequestBody {

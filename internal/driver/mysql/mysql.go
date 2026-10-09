@@ -75,17 +75,12 @@ func openMySQL(ctx context.Context, p driver.ConnectParams, useTLS bool) (driver
 }
 
 func buildDSN(p driver.ConnectParams, useTLS bool) (string, error) {
-	if p.Host == "" {
-		return "", errors.New("mysql: host required")
-	}
 	if p.Port == 0 {
 		p.Port = 3306
 	}
 	cfg := mysqldriver.Config{
 		User:                 p.User,
 		Passwd:               string(p.Password),
-		Net:                  "tcp",
-		Addr:                 fmt.Sprintf("%s:%d", p.Host, p.Port),
 		DBName:               p.DB,
 		ParseTime:            false,
 		InterpolateParams:    false,
@@ -93,6 +88,30 @@ func buildDSN(p driver.ConnectParams, useTLS bool) (string, error) {
 		Params: map[string]string{
 			"charset": "utf8mb4",
 		},
+	}
+	switch p.TransportKind {
+	case "socket":
+		if p.TransportPath == "" {
+			return "", errors.New("mysql: socket path required")
+		}
+		cfg.Net = "unix"
+		cfg.Addr = p.TransportPath
+	case "pipe":
+		if p.TransportPath == "" {
+			return "", errors.New("mysql: pipe name required")
+		}
+		name, err := registerMySQLPipeDial(p.TransportPath)
+		if err != nil {
+			return "", err
+		}
+		cfg.Net = name
+		cfg.Addr = ""
+	default:
+		if p.Host == "" {
+			return "", errors.New("mysql: host required")
+		}
+		cfg.Net = "tcp"
+		cfg.Addr = fmt.Sprintf("%s:%d", p.Host, p.Port)
 	}
 	if p.AllowPublicKeyRetrieval {
 		cfg.Params["allowPublicKeyRetrieval"] = "true"

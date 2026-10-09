@@ -19,14 +19,15 @@ type SSHConnectSecrets struct {
 // TestConnect opens a connection from a profile draft and pings the server.
 func TestConnect(ctx context.Context, p store.Profile, password []byte, sshSec SSHConnectSecrets) (driver.Conn, time.Duration, driver.ServerInfo, error) {
 	params := driver.ConnectParams{
-		Host:                    p.Transport.Host,
-		Port:                    p.Transport.Port,
 		DB:                      p.Database,
 		User:                    p.User,
 		Password:                password,
 		ConnectTimeout:          10 * time.Second,
 		AllowPublicKeyRetrieval: p.Options.AllowPublicKeyRetrieval,
 		TLS:                     TLSParamsFromProfile(p),
+	}
+	if err := driver.ApplyProfileTransport(&params, p.Engine, p.Transport.Kind, p.Transport.Host, p.Transport.Path, p.Transport.Port); err != nil {
+		return nil, 0, driver.ServerInfo{}, err
 	}
 	if p.Advanced.StatementTimeoutSec > 0 {
 		params.StatementTimeout = time.Duration(p.Advanced.StatementTimeoutSec) * time.Second

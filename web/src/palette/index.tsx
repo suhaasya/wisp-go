@@ -113,6 +113,7 @@ export function CommandPalette() {
       <div
         class="h-fit w-[560px] max-w-[calc(100vw-24px)] overflow-hidden rounded-dialog border border-line bg-panel shadow-lg"
         role="dialog"
+        aria-modal="true"
         aria-label="Command palette"
         onKeyDown={onKeyDown as unknown as (e: Event) => void}
       >

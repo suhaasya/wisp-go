@@ -20,6 +20,19 @@ export function tabTitle(tab: WorkspaceTab): string {
   }
 }
 
+const SERVER_TOOLS_TAB_ID = "server_tools";
+
+export function openServerToolsTab(): void {
+  const existing = workspaceTabs.value.find((t) => t.id === SERVER_TOOLS_TAB_ID);
+  if (!existing) {
+    workspaceTabs.value = [
+      ...workspaceTabs.value,
+      { id: SERVER_TOOLS_TAB_ID, kind: "server_tools", pinned: false },
+    ];
+  }
+  activateWorkspaceTab(SERVER_TOOLS_TAB_ID);
+}
+
 export function newQueryTab(): WorkspaceTab {
   const n = workspaceTabs.value.filter((t) => t.kind === "query").length + 1;
   return {

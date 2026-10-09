@@ -12,6 +12,7 @@ import { refreshSessionInfo } from "../session-workspace";
 import { DataTab } from "../grid/DataTab";
 import { StructureTab } from "./structure";
 import { QueryTab } from "./QueryTab";
+import { ServerTools } from "./server-tools";
 import { SchemaSidebar } from "./sidebar";
 import {
   activateWorkspaceTab,
@@ -123,8 +124,11 @@ export function WorkspaceShell({ sessionId }: WorkspaceShellProps) {
               return (
                 <div
                   key={tab.id}
+                  id={`workspace-tab-${tab.id}`}
                   role="tab"
                   aria-selected={active}
+                  aria-controls="workspace-tabpanel"
+                  tabIndex={active ? 0 : -1}
                   draggable
                   class={
                     active
@@ -173,7 +177,12 @@ export function WorkspaceShell({ sessionId }: WorkspaceShellProps) {
             })}
           </div>
         ) : null}
-        <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div
+          id="workspace-tabpanel"
+          role="tabpanel"
+          aria-labelledby={activeTab ? `workspace-tab-${activeTab.id}` : undefined}
+          class="flex min-h-0 flex-1 flex-col overflow-hidden"
+        >
           {activeTab?.kind === "table_data" ? (
             <DataTab key={activeTab.id} sessionId={sessionId} tab={activeTab} />
           ) : activeTab?.kind === "table_structure" ? (
@@ -185,6 +194,8 @@ export function WorkspaceShell({ sessionId }: WorkspaceShellProps) {
             />
           ) : activeTab?.kind === "query" ? (
             <QueryTab key={activeTab.id} sessionId={sessionId} tab={activeTab} />
+          ) : activeTab?.kind === "server_tools" ? (
+            <ServerTools key={activeTab.id} sessionId={sessionId} />
           ) : activeTab ? (
             <div class="flex flex-1 flex-col p-6">
               <h2 class="text-15 font-semibold text-ink">{tabTitle(activeTab)}</h2>

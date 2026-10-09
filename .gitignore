@@ -31,6 +31,8 @@ go.work.sum
 # Wisp
 /bin/
 /bench-results/
+minisign.key
+*.minisign.key
 
 # Node / frontend (any package root)
 node_modules/

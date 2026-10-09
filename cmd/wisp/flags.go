@@ -56,7 +56,7 @@ func ParseArgs(args []string) (RunMode, RunConfig, error) {
 	dev := fs.Bool("dev", false, "serve web/ from disk")
 	idleExit := fs.Duration("idle-exit", 10*time.Minute, "exit after last tab disconnect")
 	logLevel := fs.String("log-level", "info", "log level")
-	update := fs.Bool("update", false, "download and install update (stub)")
+	update := fs.Bool("update", false, "download and install the latest release")
 	if err := fs.Parse(args[1:]); err != nil {
 		return ModeRun, cfg, err
 	}

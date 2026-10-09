@@ -38,8 +38,11 @@ func main() {
 		fmt.Println(version)
 		return
 	case ModeUpdate:
-		fmt.Fprintln(os.Stderr, "wisp: --update is not implemented yet (LW-047)")
-		os.Exit(1)
+		if err := runUpdate(); err != nil {
+			fmt.Fprintf(os.Stderr, "wisp: %v\n", err)
+			os.Exit(1)
+		}
+		return
 	case ModeStop:
 		paths, err := store.DefaultPaths()
 		if err != nil {

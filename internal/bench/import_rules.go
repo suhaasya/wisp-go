@@ -43,6 +43,7 @@ var allowedInternalDeps = map[string][]string{
 	modulePath + "/internal/server": {modulePath + "/internal/api"},
 	modulePath + "/internal/mover":  {modulePath + "/internal/driver", modulePath + "/internal/sqlgen"},
 	modulePath + "/internal/bench":  {},
+	modulePath + "/internal/update": {},
 }
 
 // CheckInternalImportRules runs go list over ./internal/... and returns violations.

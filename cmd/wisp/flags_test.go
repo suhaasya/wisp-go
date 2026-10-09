@@ -47,6 +47,28 @@ func TestParseArgs_versionFlag(t *testing.T) {
 	}
 }
 
+func TestParseArgs_updateSubcommand(t *testing.T) {
+	t.Parallel()
+	mode, _, err := ParseArgs([]string{"wisp", "update"})
+	if err != nil {
+		t.Fatalf("ParseArgs: %v", err)
+	}
+	if mode != ModeUpdate {
+		t.Fatalf("mode = %v, want ModeUpdate", mode)
+	}
+}
+
+func TestParseArgs_updateFlag(t *testing.T) {
+	t.Parallel()
+	mode, _, err := ParseArgs([]string{"wisp", "--update"})
+	if err != nil {
+		t.Fatalf("ParseArgs: %v", err)
+	}
+	if mode != ModeUpdate {
+		t.Fatalf("mode = %v, want ModeUpdate", mode)
+	}
+}
+
 func TestParseArgs_runFlags(t *testing.T) {
 	t.Parallel()
 	mode, cfg, err := ParseArgs([]string{

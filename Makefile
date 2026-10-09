@@ -2,7 +2,7 @@ export CGO_ENABLED := 0
 
 VERSION ?= dev
 
-.PHONY: web build test lint dev size bench tabbench gate e2e
+.PHONY: web build test lint dev size bench tabbench gate e2e release-snapshot
 
 web:
 	cd web && npm ci && npm run build
@@ -43,6 +43,9 @@ tabbench:
 gate: size bench tabbench
 	@mkdir -p bench-results
 	go run ./tools/gate
+
+release-snapshot: web
+	goreleaser release --snapshot --clean
 
 e2e: build
 	cd e2e && npm ci && npx playwright install chromium firefox webkit

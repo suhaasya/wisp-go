@@ -1,0 +1,88 @@
+version: 2
+project_name: wisp
+
+before:
+  hooks:
+    - make web
+
+builds:
+  - id: wisp
+    main: ./cmd/wisp
+    binary: wisp
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        format: zip
+    name_template: "wisp_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - none*
+
+checksum:
+  name_template: checksums.txt
+
+signs:
+  - cmd: bash
+    args:
+      - -ceu
+      - |
+        if [ -z "${MINISIGN_SECRET_KEY:-}" ]; then
+          echo "MINISIGN_SECRET_KEY not set; skipping minisign"
+          exit 0
+        fi
+        minisign -S -m "${MINISIGN_SECRET_KEY}" -s "${artifact}" -x "${artifact}.minisig"
+    artifacts: checksum
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-snapshot"
+
+release:
+  github:
+    owner: suhaasya
+    name: wisp-go
+  draft: false
+
+brews:
+  - name: wisp
+    repository:
+      owner: suhaasya
+      name: homebrew-wisp
+    commit_author:
+      name: Wisp Release
+      email: release@wisp.local
+    homepage: https://github.com/suhaasya/wisp-go
+    description: Local database client for PostgreSQL, MySQL and MariaDB
+    install: |
+      bin.install "wisp"
+    test: |
+      system "#{bin}/wisp", "version"
+
+scoops:
+  - name: wisp
+    bucket:
+      owner: suhaasya
+      name: scoop-wisp
+    homepage: https://github.com/suhaasya/wisp-go
+    description: Local database client for PostgreSQL, MySQL and MariaDB
+    license: MIT
+    persist: []

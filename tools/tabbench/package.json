@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bench": "node tabbench.mjs"
+    "bench": "node tabbench.mjs",
+    "gallery": "node gallery.mjs"
   },
   "devDependencies": {
     "playwright": "1.55.0"

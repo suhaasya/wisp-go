@@ -29,6 +29,7 @@
   --color-syn-fn: #1f68c4;
   --color-syn-cm: #8a93a3;
   --color-null-text: #a2aab8;
+  --color-on-accent: #ffffff;
 
   --font-sans: -apple-system, "Segoe UI", Roboto, Ubuntu, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "DejaVu Sans Mono", monospace;
@@ -70,6 +71,7 @@
   --color-syn-fn: #7db3ff;
   --color-syn-cm: #6f7888;
   --color-null-text: #5f6878;
+  --color-on-accent: #0b1f1e;
 }
 
 @layer base {

@@ -1,11 +1,21 @@
 import { useEffect } from "preact/hooks";
-import { activeWorkspaceTabId, sessionEngine, workspaceProfileId, workspaceTabs } from "../../state";
+import {
+  activeWorkspaceTabId,
+  currentSession,
+  sessionEngine,
+  workspaceProfileId,
+  workspaceTabs,
+} from "../../state";
 import { refreshSessionInfo } from "../../session-workspace";
 import { DataTab } from "../../grid/DataTab";
 import { SchemaSidebar } from "../../workspace/sidebar";
 import { openWorkspaceTableTab } from "../../workspace/tabs";
 
 export function WorkspaceScreen({ sessionId }: { sessionId: string }) {
+  useEffect(() => {
+    currentSession.value = sessionId;
+  }, [sessionId]);
+
   useEffect(() => {
     let cancelled = false;
     const tick = () => {

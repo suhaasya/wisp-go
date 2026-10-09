@@ -4,7 +4,6 @@ import "github.com/suhaasya/wisp-go/internal/driver"
 
 type cacheKey struct {
 	offset int
-	limit  int
 }
 
 type windowCache struct {
@@ -25,7 +24,8 @@ func (c *windowCache) len() int {
 }
 
 func (c *windowCache) get(offset, limit int) (*driver.Window, bool) {
-	k := cacheKey{offset: offset, limit: limit}
+	_ = limit
+	k := cacheKey{offset: offset}
 	w, ok := c.items[k]
 	if !ok {
 		return nil, false
@@ -42,7 +42,8 @@ func (c *windowCache) get(offset, limit int) (*driver.Window, bool) {
 }
 
 func (c *windowCache) put(offset, limit int, w *driver.Window) {
-	k := cacheKey{offset: offset, limit: limit}
+	_ = limit
+	k := cacheKey{offset: offset}
 	if _, ok := c.items[k]; ok {
 		c.get(offset, limit)
 	} else if len(c.order) >= c.max && c.max > 0 {

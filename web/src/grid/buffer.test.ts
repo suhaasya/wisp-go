@@ -53,30 +53,45 @@ describe("createWindowBuffer", () => {
     buf.destroy();
   });
 
-  it("aborts an in-flight fetch when a newer ensureViewport supersedes it", async () => {
+  it("loads overlapping scroll windows without aborting in-flight fetches", async () => {
+    const done: number[] = [];
+    const buf = createWindowBuffer({
+      windowRows: 150,
+      maxWindows: 3,
+      fetch: async (offset, signal) => {
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        if (signal.aborted) {
+          throw new DOMException("aborted", "AbortError");
+        }
+        done.push(offset);
+        return fakeWindow(offset);
+      },
+    });
+
+    await Promise.all([buf.ensureViewport(0, 50), buf.ensureViewport(150, 200)]);
+    expect(done).toContain(0);
+    expect(done).toContain(150);
+    expect(buf.getWindow(150)).toBeDefined();
+    buf.destroy();
+  });
+
+  it("aborts in-flight fetches on destroy", async () => {
     let aborted = false;
     const buf = createWindowBuffer({
       windowRows: 150,
       maxWindows: 3,
-      fetch: (offset, signal) => {
-        if (offset === 0) {
-          return new Promise((_resolve, reject) => {
-            signal.addEventListener("abort", () => {
-              aborted = true;
-              reject(new DOMException("aborted", "AbortError"));
-            });
+      fetch: (_offset, signal) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener("abort", () => {
+            aborted = true;
+            reject(new DOMException("aborted", "AbortError"));
           });
-        }
-        return Promise.resolve(fakeWindow(offset));
-      },
+        }),
     });
-
-    const first = buf.ensureViewport(0, 50);
-    const second = buf.ensureViewport(300, 350);
-    await expect(first).rejects.toBeDefined();
-    await second;
-    expect(aborted).toBe(true);
+    const pending = buf.ensureViewport(0, 50);
     buf.destroy();
+    await expect(pending).rejects.toBeDefined();
+    expect(aborted).toBe(true);
   });
 
   it("records last fetch time after a successful load", async () => {

@@ -58,6 +58,11 @@ type CacheEntry = {
   lastTouch: number;
 };
 
+type Inflight = {
+  ac: AbortController;
+  promise: Promise<void>;
+};
+
 export type WindowBuffer = {
   ensureViewport: (firstRow: number, lastRow: number) => Promise<void>;
   getWindow: (offset: number) => WindowPayload | undefined;
@@ -72,10 +77,10 @@ export function createWindowBuffer(opts: WindowBufferOptions): WindowBuffer {
   const windowRows = opts.windowRows ?? DEFAULT_WINDOW_ROWS;
   const maxWindows = opts.maxWindows ?? 3;
   const cache = new Map<number, CacheEntry>();
+  const inflight = new Map<number, Inflight>();
   let touchSeq = 0;
   let lastFetch: Date | null = null;
-  let generation = 0;
-  let inflight: AbortController | null = null;
+  let destroyed = false;
 
   function touch(offset: number): void {
     const e = cache.get(offset);
@@ -108,7 +113,7 @@ export function createWindowBuffer(opts: WindowBufferOptions): WindowBuffer {
       return;
     }
     const payload = await opts.fetch(offset, signal);
-    if (signal.aborted) {
+    if (signal.aborted || destroyed) {
       return;
     }
     cache.set(offset, { payload, lastTouch: ++touchSeq });
@@ -117,31 +122,31 @@ export function createWindowBuffer(opts: WindowBufferOptions): WindowBuffer {
     opts.onUpdate?.();
   }
 
-  async function ensureViewport(firstRow: number, lastRow: number): Promise<void> {
-    const gen = ++generation;
-    inflight?.abort();
+  function ensureOffsetLoaded(offset: number): Promise<void> {
+    if (cache.has(offset)) {
+      touch(offset);
+      return Promise.resolve();
+    }
+    const pending = inflight.get(offset);
+    if (pending) {
+      return pending.promise;
+    }
     const ac = new AbortController();
-    inflight = ac;
+    const promise = loadOffset(offset, ac.signal).finally(() => {
+      inflight.delete(offset);
+    });
+    inflight.set(offset, { ac, promise });
+    return promise;
+  }
+
+  async function ensureViewport(firstRow: number, lastRow: number): Promise<void> {
+    if (destroyed) {
+      return;
+    }
     const cached = [...cache.keys()];
     const { required, prefetch } = offsetsNeededForViewport(firstRow, lastRow, windowRows, cached);
-    const toLoad = [...required, ...prefetch];
-    for (const off of toLoad) {
-      if (gen !== generation) {
-        ac.abort();
-        throw new DOMException("superseded", "AbortError");
-      }
-      try {
-        await loadOffset(off, ac.signal);
-      } catch (e) {
-        if (ac.signal.aborted || gen !== generation) {
-          throw e;
-        }
-        throw e;
-      }
-    }
-    if (inflight === ac) {
-      inflight = null;
-    }
+    const toLoad = [...new Set([...required, ...prefetch])];
+    await Promise.all(toLoad.map((off) => ensureOffsetLoaded(off)));
   }
 
   function getWindow(offset: number): WindowPayload | undefined {
@@ -188,9 +193,11 @@ export function createWindowBuffer(opts: WindowBufferOptions): WindowBuffer {
     cachedOffsets: () => [...cache.keys()],
     lastFetchTime: () => lastFetch,
     destroy: () => {
-      generation++;
-      inflight?.abort();
-      inflight = null;
+      destroyed = true;
+      for (const { ac } of inflight.values()) {
+        ac.abort();
+      }
+      inflight.clear();
       cache.clear();
     },
   };

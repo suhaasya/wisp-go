@@ -8,7 +8,14 @@ export type Route =
   | { name: "gallery" }
   | { name: "bench-grid" };
 
-export const route = signal<Route>({ name: "connections" });
+function initialRoute(): Route {
+  if (typeof location === "undefined") {
+    return { name: "connections" };
+  }
+  return parseRoute(location.hash || "#/connections");
+}
+
+export const route = signal<Route>(initialRoute());
 
 export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#/, "") || "/connections";

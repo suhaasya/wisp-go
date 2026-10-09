@@ -1,10 +1,16 @@
-# Wisp agent pack
+# Wisp
 
-Copy these files into the root of your new repository before ticket LW-001:
+Local database client for PostgreSQL, MySQL, and MariaDB. One Go binary serves the UI on `127.0.0.1`; the browser runs Preact + TypeScript (Vite, Tailwind CSS v4).
 
-- AGENTS.md / CLAUDE.md – rules every agent reads first
-- .claude/skills/tdd/SKILL.md – the TDD skill every coding prompt follows (add your tests.md and mocking.md next to it)
-- GLOSSARY.md – the project's domain words (the TDD skill reads it)
-- docs/PRD.md – the full PRD (exported 8 Oct 2026; re-export if you edit the PRD doc)
-- design/ – HTML mockup and screenshots (light and dark) of every screen
-- prompts/ – one ready-to-paste prompt per ticket, in build order (see prompts/README.md)
+## Development
+
+```bash
+cd web && npm ci && cd ..
+make lint
+make test
+make build
+./bin/wisp --version
+make dev   # Vite dev server + go run ./cmd/wisp -dev
+```
+
+See [AGENTS.md](AGENTS.md) and [docs/PRD.md](docs/PRD.md) for architecture and rules.

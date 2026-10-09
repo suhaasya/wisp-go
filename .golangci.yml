@@ -1,0 +1,23 @@
+version: "2"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - gosec
+    - revive
+    - unused
+    - ineffassign
+    - bodyclose
+    - noctx
+  settings:
+    revive:
+      rules:
+        - name: package-comments
+          disabled: false
+  exclusions:
+    rules:
+      - linters:
+          - gosec
+        path: _test\.go

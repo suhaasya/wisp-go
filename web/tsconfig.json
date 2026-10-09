@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es2022",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "types": ["vite/client", "vitest/globals"]
+  },
+  "include": ["src"]
+}

@@ -28,6 +28,14 @@ go.work.sum
 # env file
 .env
 
+# Wisp
+/bin/
+/web/node_modules/
+/web/dist/
+
+# npm
+npm-debug.log*
+
 # Editor/IDE
 # .idea/
 # .vscode/

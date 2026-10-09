@@ -56,6 +56,12 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --prefix web && npm run build --prefix web
       - run: make size bench gate
         env:
           WISP_SKIP_TAB: "1"
@@ -68,6 +74,12 @@ jobs:
         with:
           go-version-file: go.mod
           cache-dependency-path: go.sum
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --prefix web && npm run build --prefix web
       - run: make size bench gate
         env:
           WISP_SKIP_TAB: "1"

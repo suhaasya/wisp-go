@@ -35,6 +35,9 @@ jobs:
       - name: npm ci (web)
         run: npm ci --prefix web
 
+      - name: Build web (go:embed dist)
+        run: npm run build --prefix web
+
       - name: make lint
         run: make lint
 

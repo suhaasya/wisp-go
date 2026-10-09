@@ -77,6 +77,10 @@ func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				h.serveSchema(w, r, sid, rest)
 				return
 			default:
+				if strings.HasPrefix(rest, "ddl/") {
+					h.serveDDL(w, r, sid, strings.TrimPrefix(rest, "ddl/"))
+					return
+				}
 				if strings.HasPrefix(rest, "tables/") {
 					h.serveSchema(w, r, sid, rest)
 					return

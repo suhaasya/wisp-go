@@ -85,6 +85,8 @@ export type SchemaTreeProps = {
   selectedObject: { schema: string; name: string } | null;
   onSelectObject: (schema: string, name: string) => void;
   onOpenTable: (req: OpenTableRequest) => void;
+  readOnly?: boolean;
+  onCatalogDDL?: (req: { action: "truncate" | "drop" | "rename"; schema: string; table: string }) => void;
   fetchObjectsImpl?: typeof fetchObjects;
 };
 
@@ -114,6 +116,8 @@ export function SchemaTree({
   selectedObject,
   onSelectObject,
   onOpenTable,
+  readOnly = false,
+  onCatalogDDL,
   fetchObjectsImpl = fetchObjects,
 }: SchemaTreeProps) {
   const [namesByGroup, setNamesByGroup] = useState<Record<SchemaGroupId, string[]>>({
@@ -213,6 +217,11 @@ export function SchemaTree({
             break;
           }
         }
+        break;
+      case "truncate":
+      case "drop":
+      case "rename":
+        onCatalogDDL?.({ action, schema, table: objectName });
         break;
     }
   };
@@ -324,6 +333,8 @@ export function SchemaTree({
         open={menu !== null}
         x={menu?.x ?? 0}
         y={menu?.y ?? 0}
+        readOnly={readOnly}
+        tablesOnly={menu ? namesByGroup.tables.includes(menu.name) : false}
         onClose={() => setMenu(null)}
         onAction={(action) => {
           if (menu) {

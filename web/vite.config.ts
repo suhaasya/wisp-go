@@ -32,6 +32,9 @@ export default defineConfig({
           if (id.includes("@codemirror") || id.includes("/codemirror")) {
             return "editor";
           }
+          if (id.includes("/dialogs/new-table")) {
+            return "new-table";
+          }
         },
       },
     },

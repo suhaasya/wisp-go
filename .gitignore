@@ -30,8 +30,10 @@ go.work.sum
 
 # Wisp
 /bin/
+/bench-results/
 /web/node_modules/
 /web/dist/
+/tools/tabbench/node_modules/
 
 # npm
 npm-debug.log*

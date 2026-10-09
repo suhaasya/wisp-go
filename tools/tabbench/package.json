@@ -1,0 +1,11 @@
+{
+  "name": "wisp-tabbench",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bench": "node tabbench.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.55.0"
+  }
+}

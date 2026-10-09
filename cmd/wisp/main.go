@@ -17,6 +17,14 @@ import (
 var version = "dev"
 
 func main() {
+	if scen, ok := benchScenarioFromArgs(os.Args); ok {
+		if err := runBenchScenario(scen); err != nil {
+			fmt.Fprintf(os.Stderr, "wisp bench: %v\n", err)
+			os.Exit(1)
+		}
+		return
+	}
+
 	mode, cfg, err := ParseArgs(os.Args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "wisp: %v\n", err)

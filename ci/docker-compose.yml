@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: wisp
+      POSTGRES_PASSWORD: wisp
+      POSTGRES_DB: wisp_bench
+    ports:
+      - "54329:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wisp -d wisp_bench"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: wisp
+      MYSQL_DATABASE: wisp_bench
+      MYSQL_USER: wisp
+      MYSQL_PASSWORD: wisp
+    ports:
+      - "33069:3306"
+    volumes:
+      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-pwisp"]
+      interval: 5s
+      timeout: 5s
+      retries: 10

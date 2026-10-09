@@ -2,7 +2,7 @@ export CGO_ENABLED := 0
 
 VERSION ?= dev
 
-.PHONY: web build test lint dev
+.PHONY: web build test lint dev size bench tabbench gate
 
 web:
 	cd web && npm ci && npm run build
@@ -26,3 +26,20 @@ dev:
 	(cd web && npm run dev) & \
 	go run ./cmd/wisp -dev & \
 	wait
+
+size: build
+	@mkdir -p bench-results
+	go run ./tools/size
+
+bench: build
+	@mkdir -p bench-results
+	./bin/wisp --bench-scenario all
+
+tabbench:
+	@mkdir -p bench-results
+	cd tools/tabbench && npm ci
+	WISP_SKIP_TAB=$${WISP_SKIP_TAB:-1} npm --prefix tools/tabbench run bench
+
+gate: size bench tabbench
+	@mkdir -p bench-results
+	go run ./tools/gate

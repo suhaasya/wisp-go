@@ -3,10 +3,11 @@ package server
 import (
 	"crypto/subtle"
 	"encoding/base64"
-	"encoding/json"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/suhaasya/wisp-go/internal/api"
 )
 
 const (
@@ -92,9 +93,12 @@ func (g *Guard) CSRF(r *http.Request) string {
 }
 
 // RegisterRoutes mounts bootstrap handlers on mux (inside Guard.Wrap).
-func (g *Guard) RegisterRoutes(mux *http.ServeMux) {
+func (g *Guard) RegisterRoutes(mux *http.ServeMux, version string, events http.Handler) {
 	mux.HandleFunc("/auth/exchange", g.handleExchange)
-	mux.HandleFunc("/api/v1/hello", g.handleHello)
+	mux.Handle("/api/v1/hello", api.HelloHandler(version, g.CSRF))
+	if events != nil {
+		mux.Handle("/api/v1/events", events)
+	}
 }
 
 func (g *Guard) handleExchange(w http.ResponseWriter, r *http.Request) {
@@ -161,20 +165,6 @@ func (g *Guard) redeemLaunchToken(tok string) bool {
 	entry.used = true
 	g.launchTokens[matchedKey] = entry
 	return true
-}
-
-func (g *Guard) handleHello(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	csrf := g.CSRF(r)
-	if csrf == "" {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]string{"csrf": csrf})
 }
 
 func (g *Guard) sessionValid(r *http.Request) bool {

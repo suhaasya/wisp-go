@@ -1,11 +1,11 @@
-import { signal } from "@preact/signals";
+import { themePreference, type ThemePreference } from "./state";
 
-export type ThemePreference = "light" | "dark" | "system";
+export type { ThemePreference };
 export type ResolvedTheme = "light" | "dark";
 
-const storageKey = "wisp-theme";
+export { themePreference };
 
-export const themePreference = signal<ThemePreference>("system");
+const storageKey = "wisp-theme";
 
 let systemListenerAttached = false;
 let mediaQuery: MediaQueryList | null = null;
@@ -48,7 +48,6 @@ function attachSystemListener(): void {
   systemListenerAttached = true;
 }
 
-/** Test-only reset for module listener state. */
 export function resetThemeForTests(): void {
   if (mediaQuery && systemListenerAttached) {
     mediaQuery.removeEventListener("change", onSystemSchemeChange);

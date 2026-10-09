@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/preact";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { dismissToast, pushToast, ToastViewport, toasts } from "./Toast";
+import { toasts } from "../state";
+import { dismissToast, pushToast, ToastViewport } from "./Toast";
 
 describe("Toast", () => {
   beforeEach(() => {

@@ -14,10 +14,13 @@ func applySecurityHeaders(w http.ResponseWriter, path string) {
 
 func cspBase(dev bool) string {
 	connect := "connect-src 'self'"
+	style := ""
 	if dev {
+		// Vite injects Tailwind and HMR as inline <style> tags when Go proxies the dev server.
 		connect = "connect-src 'self' ws://127.0.0.1:5173 ws://localhost:5173"
+		style = "style-src 'self' 'unsafe-inline'; "
 	}
-	return "default-src 'self'; script-src 'self'; img-src 'self' data:; " + connect + "; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
+	return "default-src 'self'; script-src 'self'; " + style + "img-src 'self' data:; " + connect + "; frame-ancestors 'none'; base-uri 'none'; form-action 'self'"
 }
 
 func setCSPDefault(w http.ResponseWriter, dev bool) {

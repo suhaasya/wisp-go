@@ -1,17 +1,9 @@
-import { signal } from "@preact/signals";
 import { useEffect } from "preact/hooks";
+import { toasts, type ToastItem, type ToastTone } from "../state";
 import { cx } from "./cx";
 
-export type ToastTone = "default" | "success" | "error";
-
-export interface ToastItem {
-  id: string;
-  message: string;
-  tone?: ToastTone;
-  durationMs?: number;
-}
-
-export const toasts = signal<ToastItem[]>([]);
+export type { ToastItem, ToastTone };
+export { toasts } from "../state";
 
 let toastSeq = 0;
 

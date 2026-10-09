@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/suhaasya/wisp-go/internal/bench"
 	"github.com/suhaasya/wisp-go/internal/server"
 	"github.com/suhaasya/wisp-go/internal/store"
 	"github.com/suhaasya/wisp-go/web"
@@ -71,9 +72,11 @@ func runServer(cfg RunConfig) {
 		Dev:       cfg.Dev,
 		IdleExit:  cfg.IdleExit,
 		LogLevel:  cfg.LogLevel,
+		Version:   version,
 		NoBrowser: cfg.NoBrowser,
 		AppWindow: cfg.AppWindow,
 		AssetFS:   web.DistFS(),
+		RSSSample: bench.RSSMegabytes,
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

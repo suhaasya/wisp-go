@@ -1,11 +1,11 @@
 import { render } from "preact";
 import { App } from "./App";
 import "./styles/app.css";
-import { initTheme } from "./theme";
+import { startApp } from "./main";
 
-initTheme();
-
-const root = document.getElementById("app");
-if (root) {
-  render(<App />, root);
-}
+void startApp().then(() => {
+  const root = document.getElementById("app");
+  if (root) {
+    render(<App />, root);
+  }
+});

@@ -28,10 +28,12 @@ type StartConfig struct {
 	Dev       bool
 	IdleExit  time.Duration
 	LogLevel  string
+	Version   string
 	NoBrowser bool
 	AppWindow bool
 	Launcher  Launcher
 	AssetFS   fs.FS
+	RSSSample func() (float64, error)
 }
 
 // RunOrHandoff starts the primary server or handoffs to an existing instance.
@@ -72,13 +74,19 @@ func runPrimary(ctx context.Context, cfg StartConfig) error {
 
 	guard := NewGuard(port)
 	guard.SetDev(cfg.Dev)
+	version := cfg.Version
+	if version == "" {
+		version = "dev"
+	}
+	hub := NewEventHub(EventHubConfig{Dev: cfg.Dev, RSSMegabytes: cfg.RSSSample})
 	root := http.NewServeMux()
-	if err := registerRoutes(root, cfg, guard, secretPath); err != nil {
+	if err := registerRoutes(root, cfg, guard, secretPath, hub, version); err != nil {
 		return err
 	}
 
 	srv := NewHTTPServer(root)
 	idle := NewIdleLifecycle(cfg.IdleExit, func() {
+		hub.BroadcastShutdown()
 		_ = srv.Shutdown(context.Background())
 	})
 
@@ -171,10 +179,10 @@ func RunStop(paths RuntimePaths) error {
 	return StopProcess(rec.PID)
 }
 
-func registerRoutes(root *http.ServeMux, cfg StartConfig, guard *Guard, secretPath string) error {
+func registerRoutes(root *http.ServeMux, cfg StartConfig, guard *Guard, secretPath string, events http.Handler, version string) error {
 	root.Handle("/internal/handoff", api.NewHandoffHandler(secretPath, guard.MintLaunchURL))
 	inner := http.NewServeMux()
-	guard.RegisterRoutes(inner)
+	guard.RegisterRoutes(inner, version, events)
 	assetFS := cfg.AssetFS
 	if assetFS == nil {
 		assetFS = emptyFS{}

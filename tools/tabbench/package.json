@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "bench": "node tabbench.mjs",
-    "gallery": "node gallery.mjs"
+    "gallery": "node gallery.mjs",
+    "shell-nav": "node shell-nav.mjs"
   },
   "devDependencies": {
     "playwright": "1.55.0"

@@ -5,6 +5,6 @@ import { App } from "./App";
 describe("App", () => {
   it("renders placeholder shell", () => {
     render(<App />);
-    expect(screen.getByRole("heading", { name: "Wisp" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Connections" })).toBeTruthy();
   });
 });

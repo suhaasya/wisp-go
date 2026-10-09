@@ -222,6 +222,12 @@ func (b *ColumnBuilder) SetText(row int, s string) {
 
 func (b *ColumnBuilder) SetNull(row int) {
 	b.data.nulls = appendUniqueInt(b.data.nulls, row)
+	if b.data.kind == colText {
+		off := b.textOffsets()
+		if row+1 < len(off) && off[row+1] == 0 {
+			off[row+1] = off[row]
+		}
+	}
 }
 
 func (b *ColumnBuilder) textOffsets() []int {
@@ -338,7 +344,12 @@ func writeColumnValuesJSON(buf *bytes.Buffer, arena []byte, textOffsets []int, c
 			if r > 0 {
 				buf.WriteByte(',')
 			}
-			writeJSONString(buf, arena[off[r]:off[r+1]])
+			start, end := off[r], off[r+1]
+			if start > end || end > len(arena) {
+				writeJSONString(buf, nil)
+				continue
+			}
+			writeJSONString(buf, arena[start:end])
 		}
 	}
 	buf.WriteByte(']')

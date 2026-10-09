@@ -40,5 +40,8 @@ func (f *keysetTableFetcher) queryWindow(ctx context.Context, sqlText string, li
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
+	if scanned := rows.Columns(); len(scanned) > 0 {
+		f.columns = scanned
+	}
 	return rows.NextWindow(limit)
 }

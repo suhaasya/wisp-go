@@ -3,16 +3,12 @@ package pager
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/suhaasya/wisp-go/internal/driver"
 )
 
 func (m *Manager) newTableFetcher(ctx context.Context, src Source) (fetcher, Total, error) {
-	cols := []driver.ColumnMeta{
-		{Name: "id", Type: "int8"},
-		{Name: "name", Type: "text"},
-	}
+	cols := tableColumns(src)
 	if m.engine == "mock" {
 		n := m.mockTotal
 		if n <= 0 {
@@ -32,17 +28,21 @@ func (m *Manager) newTableFetcher(ctx context.Context, src Source) (fetcher, Tot
 		return nil, Total{}, err
 	}
 	if len(keys) > 0 {
-		return newKeysetTableFetcher(m.conn, table, keys, colsFromKeys(keys)), total, nil
+		return newKeysetTableFetcher(m.conn, table, keys, cols), total, nil
 	}
 	return newOffsetTableFetcher(m.conn, table, cols), total, nil
 }
 
-func colsFromKeys(keys []string) []driver.ColumnMeta {
-	out := make([]driver.ColumnMeta, len(keys))
-	for i, k := range keys {
-		out[i] = driver.ColumnMeta{Name: strings.Trim(k, `"`), Type: "int8"}
+func tableColumns(src Source) []driver.ColumnMeta {
+	if len(src.Columns) > 0 {
+		out := make([]driver.ColumnMeta, len(src.Columns))
+		copy(out, src.Columns)
+		return out
 	}
-	return out
+	return []driver.ColumnMeta{
+		{Name: "id", Type: "int8"},
+		{Name: "name", Type: "text"},
+	}
 }
 
 func (m *Manager) tableTotal(ctx context.Context, src Source, quotedTable string) (Total, error) {
@@ -95,8 +95,8 @@ func (f *offsetTableFetcher) Fetch(ctx context.Context, offset, limit int) (*dri
 		return nil, err
 	}
 	defer func() { _ = rows.Close() }()
-	if len(f.columns) == 0 || f.columns[0].Name == "id" && len(rows.Columns()) > 0 {
-		f.columns = rows.Columns()
+	if scanned := rows.Columns(); len(scanned) > 0 {
+		f.columns = scanned
 	}
 	return rows.NextWindow(limit)
 }

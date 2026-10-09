@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/suhaasya/wisp-go/internal/driver"
 	"github.com/suhaasya/wisp-go/internal/pager"
 )
 
@@ -21,10 +22,17 @@ func (s *Session) ensurePager() *pager.Manager {
 
 // OpenResult opens a table browse or query result on the main connection.
 func (s *Session) OpenResult(ctx context.Context, src pager.Source) (pager.OpenResult, error) {
-	if src.Kind == pager.SourceTable && len(src.KeyColumns) == 0 {
+	if src.Kind == pager.SourceTable {
 		det, err := s.TableMetadata(ctx, src.Schema, src.Table, false)
-		if err == nil && len(det.PrimaryKey) > 0 {
-			src.KeyColumns = append([]string(nil), det.PrimaryKey...)
+		if err == nil {
+			if len(det.PrimaryKey) > 0 && len(src.KeyColumns) == 0 {
+				src.KeyColumns = append([]string(nil), det.PrimaryKey...)
+			}
+			if len(src.Columns) == 0 {
+				for _, c := range det.Columns {
+					src.Columns = append(src.Columns, driver.ColumnMeta{Name: c.Name, Type: c.Type})
+				}
+			}
 		}
 	}
 	if src.Kind == pager.SourceQuery {

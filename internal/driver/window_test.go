@@ -64,6 +64,20 @@ func TestWindowMarshalJSONTruncatedCell(t *testing.T) {
 	}
 }
 
+func TestWindowMarshalJSONTextNullAfterFilledRows(t *testing.T) {
+	const rows = 40
+	w := driver.NewWindow([]driver.ColumnMeta{{Name: "note", Type: "text"}}, rows)
+	b := w.Column(0)
+	for r := 0; r < rows-1; r++ {
+		b.SetText(r, "x")
+	}
+	b.SetNull(rows - 1)
+	w.Rows = rows
+	if _, err := w.MarshalJSON(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func BenchmarkWindowMarshal150x10x20(b *testing.B) {
 	const rows, cols = 150, 10
 	meta := make([]driver.ColumnMeta, cols)

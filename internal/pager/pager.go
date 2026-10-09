@@ -31,6 +31,7 @@ type Source struct {
 	Table      string
 	SQL        string
 	KeyColumns []string
+	Columns    []driver.ColumnMeta
 }
 
 // Total describes row count kind and value.

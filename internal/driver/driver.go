@@ -47,6 +47,9 @@ type ConnectParams struct {
 	PgPassFile       string
 	ConnectTimeout   time.Duration
 	StatementTimeout time.Duration
+
+	// MySQL/MariaDB (LW-014)
+	AllowPublicKeyRetrieval bool
 }
 
 // ServerInfo describes the connected server.

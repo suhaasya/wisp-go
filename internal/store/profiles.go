@@ -65,7 +65,9 @@ type SSHConfig struct {
 
 // ConnOptions holds driver-specific connection flags.
 type ConnOptions struct {
-	AllowPublicKeyRetrieval bool `json:"allow_public_key_retrieval,omitempty"`
+	AllowPublicKeyRetrieval bool              `json:"allow_public_key_retrieval,omitempty"`
+	Extra                   map[string]string `json:"extra,omitempty"`
+	Provider                string            `json:"provider,omitempty"`
 }
 
 // ConnectionsDocument is the on-disk connections file.

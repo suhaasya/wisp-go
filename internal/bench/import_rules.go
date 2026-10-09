@@ -19,14 +19,14 @@ type ImportViolation struct {
 // allowedInternalDeps maps each internal package import path to the internal
 // packages it may import directly (AGENTS.md section 2).
 var allowedInternalDeps = map[string][]string{
-	modulePath + "/internal/transport": {},
+	modulePath + "/internal/transport":       {},
 	modulePath + "/internal/driver":          {modulePath + "/internal/transport"},
 	modulePath + "/internal/driver/postgres": {modulePath + "/internal/driver"},
 	modulePath + "/internal/driver/mysql":    {modulePath + "/internal/driver"},
-	modulePath + "/internal/driver/mock":   {modulePath + "/internal/driver"},
-	modulePath + "/internal/pager":     {modulePath + "/internal/driver"},
-	modulePath + "/internal/sqlgen":    {modulePath + "/internal/driver"},
-	modulePath + "/internal/store":     {},
+	modulePath + "/internal/driver/mock":     {modulePath + "/internal/driver"},
+	modulePath + "/internal/pager":           {modulePath + "/internal/driver"},
+	modulePath + "/internal/sqlgen":          {modulePath + "/internal/driver"},
+	modulePath + "/internal/store":           {},
 	modulePath + "/internal/session": {
 		modulePath + "/internal/pager",
 		modulePath + "/internal/sqlgen",

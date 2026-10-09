@@ -31,12 +31,19 @@ go.work.sum
 # Wisp
 /bin/
 /bench-results/
-/web/node_modules/
+
+# Node / frontend (any package root)
+node_modules/
 /web/dist/
-/tools/tabbench/node_modules/
+.vite/
 
 # npm
 npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
 
 # Editor/IDE
 # .idea/

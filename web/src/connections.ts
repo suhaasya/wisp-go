@@ -18,7 +18,11 @@ export type ConnectionProfile = {
   env: ProfileEnv;
   read_only: boolean;
   safe_mode: boolean;
-  options: { allow_public_key_retrieval?: boolean };
+  options: {
+    allow_public_key_retrieval?: boolean;
+    provider?: string;
+    extra?: Record<string, string>;
+  };
   advanced?: {
     default_schema?: string;
     time_zone?: string;

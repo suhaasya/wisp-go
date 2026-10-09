@@ -2,8 +2,28 @@ import { describe, expect, it } from "vitest";
 import {
   buildTestRequest,
   defaultFormState,
+  formFromParseResult,
   validateConnectionForm,
 } from "./connection-form";
+
+describe("formFromParseResult", () => {
+  it("maps parse-url profile and password into form fields", () => {
+    const form = formFromParseResult(
+      {
+        engine: "postgres",
+        database: "app",
+        user: "u",
+        transport: { kind: "tcp", host: "db.example.com", port: 5432 },
+        password_mode: "store",
+      },
+      "secret",
+    );
+    expect(form.name).toBe("app");
+    expect(form.host).toBe("db.example.com");
+    expect(form.password).toBe("secret");
+    expect(form.passwordDirty).toBe(true);
+  });
+});
 
 describe("validateConnectionForm", () => {
   it("requires production safe mode", () => {

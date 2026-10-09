@@ -61,6 +61,42 @@ export function defaultFormState(): FormState {
   };
 }
 
+export function formFromParseResult(profile: Record<string, unknown>, password: string): FormState {
+	const engine = (profile.engine as ConnectionProfile["engine"]) ?? "postgres";
+	const transport = (profile.transport as ConnectionProfile["transport"]) ?? {
+		kind: "tcp",
+		host: "127.0.0.1",
+		port: defaultPorts[engine],
+		path: "",
+	};
+	const ssl = (profile.ssl as { mode?: string }) ?? {};
+	const advanced = (profile.advanced as Record<string, unknown>) ?? {};
+	return {
+		name: String(profile.name ?? profile.database ?? ""),
+		folder: String(profile.folder ?? ""),
+		engine,
+		transportKind: (transport.kind as FormState["transportKind"]) || "tcp",
+		host: transport.host ?? "",
+		port: transport.port || defaultPorts[engine],
+		portTouched: true,
+		user: String(profile.user ?? ""),
+		database: String(profile.database ?? ""),
+		password,
+		passwordDirty: password.length > 0,
+		savePassword: profile.password_mode !== "none",
+		env: (profile.env as ProfileEnv) ?? "development",
+		readOnly: Boolean(profile.read_only),
+		safeMode: Boolean(profile.safe_mode),
+		advanced: {
+			defaultSchema: String(advanced.default_schema ?? ""),
+			timeZone: String(advanced.time_zone ?? ""),
+			statementTimeoutSec: advanced.statement_timeout_sec ? String(advanced.statement_timeout_sec) : "",
+			keepAliveSec: advanced.keep_alive_sec ? String(advanced.keep_alive_sec) : "",
+			runOnConnect: String(advanced.run_on_connect ?? ""),
+		},
+	};
+}
+
 export function formFromProfile(p: ConnectionProfile): FormState {
   return {
     id: p.id,

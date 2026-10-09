@@ -11,12 +11,13 @@ import (
 
 // AppHandlers are HTTP handlers wired from the store layer.
 type AppHandlers struct {
-	Settings       http.Handler
-	Secrets        http.Handler
-	Connections    http.Handler
-	ConnectionTest http.Handler
-	FS             http.Handler
-	HelloSettings  SettingsSnapshot
+	Settings        http.Handler
+	Secrets         http.Handler
+	Connections     http.Handler
+	ConnectionTest  http.Handler
+	ConnectionParse http.Handler
+	FS              http.Handler
+	HelloSettings   SettingsSnapshot
 }
 
 // NewAppHandlers loads settings and secrets stores and returns API handlers.
@@ -42,11 +43,12 @@ func NewAppHandlers(settingsPath string, paths store.Paths, probe store.KeyringP
 	}
 	snap := func() (map[string]any, error) { return settingsStore.DocumentJSON() }
 	return &AppHandlers{
-		Settings:       NewSettingsHandler(settingsStore, hub),
-		Secrets:        NewSecretsHandler(secretsStore),
-		Connections:    NewConnectionsHandler(profileStore, secretsStore),
-		ConnectionTest: NewConnectionTestHandler(secretsStore),
-		FS:             NewFSHandler(home),
-		HelloSettings:  snap,
+		Settings:        NewSettingsHandler(settingsStore, hub),
+		Secrets:         NewSecretsHandler(secretsStore),
+		Connections:     NewConnectionsHandler(profileStore, secretsStore),
+		ConnectionTest:  NewConnectionTestHandler(secretsStore),
+		ConnectionParse: NewConnectionParseHandler(),
+		FS:              NewFSHandler(home),
+		HelloSettings:   snap,
 	}, nil
 }

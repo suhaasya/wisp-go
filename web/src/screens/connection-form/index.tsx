@@ -19,6 +19,7 @@ import { pushToast } from "../../ui/Toast";
 import { AdvancedTab } from "./advanced";
 import { GeneralTab } from "./general";
 import { TestResultLine } from "./test-result";
+import { looksLikeConnectionURL, parseConnectionURL, takeImportDraft } from "../connections/paste";
 
 export type ConnectionFormProps = {
   profileId?: string;
@@ -35,9 +36,14 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
   }>({});
   const [pickerOpen, setPickerOpen] = useState(false);
   const testAbort = useRef<AbortController | null>(null);
+  const [pasteURL, setPasteURL] = useState("");
 
   useEffect(() => {
     if (!profileId) {
+      const draft = takeImportDraft();
+      if (draft) {
+        setForm(draft);
+      }
       return;
     }
     let cancelled = false;
@@ -120,6 +126,22 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
 
   const title = profileId ? "Edit connection" : "New connection";
 
+  const applyPaste = async () => {
+    if (!looksLikeConnectionURL(pasteURL)) {
+      pushToast("Not a connection URL", "error");
+      return;
+    }
+    try {
+      const { form: parsed, warnings } = await parseConnectionURL(pasteURL);
+      setForm(parsed);
+      for (const w of warnings) {
+        pushToast(w, "default");
+      }
+    } catch {
+      pushToast("Could not parse connection URL", "error");
+    }
+  };
+
   return (
     <div class="grid flex-1 place-items-center overflow-auto bg-canvas p-5">
       <div class="w-full max-w-[640px] overflow-hidden rounded-dialog border border-line bg-panel shadow-lg">
@@ -130,11 +152,12 @@ export function ConnectionForm({ profileId }: ConnectionFormProps) {
               <Input
                 mono
                 ariaLabel="Paste connection URL"
-                placeholder="Paste connection URL (LW-018)"
-                disabled
+                placeholder="Paste connection URL"
+                value={pasteURL}
+                onInput={setPasteURL}
               />
             </div>
-            <Button label="Apply" disabled />
+            <Button label="Apply" onClick={() => void applyPaste()} />
           </div>
         </header>
         <Tabs

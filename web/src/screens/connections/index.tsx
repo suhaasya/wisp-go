@@ -23,6 +23,7 @@ import { pushToast } from "../../ui/Toast";
 import { ConnectionCard } from "./card";
 import { ConnectionsEmpty } from "./empty";
 import { ConnectionsRail } from "./rail";
+import { useConnectionPaste } from "./paste";
 
 export type ConnectionsScreenProps = {
   initialProfiles?: ConnectionProfile[];
@@ -35,6 +36,7 @@ export function ConnectionsScreen({
   initialFolders,
   onConnect,
 }: ConnectionsScreenProps = {}) {
+  useConnectionPaste(initialProfiles === undefined);
   const [profiles, setProfiles] = useState<ConnectionProfile[]>(initialProfiles ?? []);
   const [folders, setFolders] = useState<string[]>(initialFolders ?? []);
   const [search, setSearch] = useState("");

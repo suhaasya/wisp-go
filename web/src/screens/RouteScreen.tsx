@@ -59,6 +59,25 @@ function LazyWorkspaceTabsBench() {
   return <Screen />;
 }
 
+function LazyQueryEditorBench() {
+  const [Screen, setScreen] = useState<ComponentType | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    import("../workspace/QueryEditorBench").then((mod) => {
+      if (!cancelled) {
+        setScreen(() => mod.QueryEditorBench);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (!Screen) {
+    return <div class="flex flex-1 bg-canvas" aria-busy="true" />;
+  }
+  return <Screen />;
+}
+
 function LazyGridBench() {
   const [Screen, setScreen] = useState<ComponentType | null>(null);
   useEffect(() => {
@@ -121,6 +140,9 @@ export function RouteScreen({ route: r }: { route: Route }) {
       break;
     case "bench-workspace-tabs":
       screen = <LazyWorkspaceTabsBench />;
+      break;
+    case "bench-query-editor":
+      screen = <LazyQueryEditorBench />;
       break;
     default:
       screen = null;

@@ -126,6 +126,17 @@ async function run() {
   });
   metrics.long_task_ms = { value: longest };
 
+  try {
+    const { benchQueryEditorLoop } = await import("./query-editor.mjs");
+    const delta = await benchQueryEditorLoop(page, cdp);
+    metrics.js_heap_query_editor_delta_mb = { value: delta };
+  } catch (err) {
+    metrics.js_heap_query_editor_delta_mb = {
+      skipped: true,
+      reason: err instanceof Error ? err.message : String(err),
+    };
+  }
+
   await browser.close();
   await writeResults();
 }

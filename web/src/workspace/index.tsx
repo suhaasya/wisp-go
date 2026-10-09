@@ -10,6 +10,7 @@ import {
 } from "../state";
 import { refreshSessionInfo } from "../session-workspace";
 import { DataTab } from "../grid/DataTab";
+import { QueryTab } from "./QueryTab";
 import { SchemaSidebar } from "./sidebar";
 import {
   activateTabAtIndex,
@@ -201,20 +202,7 @@ export function WorkspaceShell({ sessionId }: WorkspaceShellProps) {
           {activeTab?.kind === "table_data" ? (
             <DataTab key={activeTab.id} sessionId={sessionId} tab={activeTab} />
           ) : activeTab?.kind === "query" ? (
-            <div class="flex flex-1 flex-col p-4">
-              <p class="text-13 font-medium text-ink">{activeTab.title}</p>
-              <textarea
-                class="mt-2 min-h-[120px] flex-1 rounded-control border border-line bg-panel p-2 font-mono text-12 text-ink"
-                value={activeTab.queryText ?? ""}
-                onInput={(e) => {
-                  const text = (e.target as HTMLTextAreaElement).value;
-                  workspaceTabs.value = workspaceTabs.value.map((t) =>
-                    t.id === activeTab.id && t.kind === "query" ? { ...t, queryText: text } : t,
-                  );
-                }}
-              />
-              <p class="mt-2 text-12 text-ink-3">Run is available in the SQL editor ticket.</p>
-            </div>
+            <QueryTab key={activeTab.id} sessionId={sessionId} tab={activeTab} />
           ) : activeTab ? (
             <div class="flex flex-1 flex-col p-6">
               <h2 class="text-15 font-semibold text-ink">{tabTitle(activeTab)}</h2>

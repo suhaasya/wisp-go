@@ -132,6 +132,12 @@ export function isTableDataTab(tab: WorkspaceTab): tab is TableDataTab {
   return tab.kind === "table_data";
 }
 
+export function updateQueryTabText(tabId: string, queryText: string): void {
+  workspaceTabs.value = workspaceTabs.value.map((t) =>
+    t.id === tabId && t.kind === "query" ? { ...t, queryText } : t,
+  );
+}
+
 export function updateTableDataTabState(
   id: string,
   patch: Partial<Pick<TableDataTab, "browseQuery" | "scrollTop" | "selection">>,

@@ -123,6 +123,14 @@ func writeJSON(w http.ResponseWriter, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
+// writeRawJSON writes server-generated JSON (e.g. pre-encoded pager windows).
+func writeRawJSON(w http.ResponseWriter, raw []byte) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	// #nosec G705 — body is JSON from the pager encoder, not request input.
+	_, _ = w.Write(raw)
+}
+
 func writeError(w http.ResponseWriter, status int, code, message, detail string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)

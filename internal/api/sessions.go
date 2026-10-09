@@ -71,6 +71,10 @@ func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					h.serveSchema(w, r, sid, rest)
 					return
 				}
+				if rest == "results" || strings.HasPrefix(rest, "results/") {
+					h.serveResults(w, r, sid, rest)
+					return
+				}
 			}
 		}
 		http.Error(w, "not found", http.StatusNotFound)

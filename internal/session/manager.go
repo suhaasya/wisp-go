@@ -239,4 +239,9 @@ func (m *Manager) evictIdle() {
 	for _, id := range idle {
 		_ = m.Delete(id)
 	}
+	m.mu.Lock()
+	for _, s := range m.sessions {
+		s.EvictIdleResults()
+	}
+	m.mu.Unlock()
 }

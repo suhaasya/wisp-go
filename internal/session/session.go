@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/suhaasya/wisp-go/internal/driver"
+	"github.com/suhaasya/wisp-go/internal/pager"
 	"github.com/suhaasya/wisp-go/internal/store"
 )
 
@@ -23,6 +24,7 @@ type Session struct {
 	main driver.Conn
 	meta driver.Conn
 
+	pager     *pager.Manager
 	metaCache *metadataCache
 
 	metaInitMu sync.Mutex
@@ -184,6 +186,7 @@ func (s *Session) shutdown() {
 		s.keepCancel()
 		s.keepCancel = nil
 	}
+	s.closeResults()
 	s.closeConns()
 	s.setState(StateClosed)
 }

@@ -1,11 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/suhaasya/wisp-go/internal/bench"
+	"github.com/suhaasya/wisp-go/internal/driver"
+	"github.com/suhaasya/wisp-go/internal/driver/mock"
+	"github.com/suhaasya/wisp-go/internal/pager"
 	"github.com/suhaasya/wisp-go/internal/server"
 )
 
@@ -71,7 +75,11 @@ func metricsForScenario(name string) (map[string]bench.Measurement, error) {
 	case "ten_connections":
 		metrics["per_conn_rss_mb"] = skipped("ten connection scenario not implemented (M1)")
 	case "scroll_1m_rows":
-		metrics["scroll_1m_rss_mb"] = skipped("pager scroll bench not implemented (M1)")
+		m, err := scroll1mMockPager()
+		if err != nil {
+			return nil, err
+		}
+		metrics["scroll_1m_rss_mb"] = m
 	case "start":
 		start := time.Now()
 		ln, err := server.ListenLoopback(0)
@@ -91,4 +99,42 @@ func metricsForScenario(name string) (map[string]bench.Measurement, error) {
 
 func skipped(reason string) bench.Measurement {
 	return bench.Measurement{Skipped: true, Reason: reason}
+}
+
+func scroll1mMockPager() (bench.Measurement, error) {
+	const total = 1_000_000
+	var d mock.Driver
+	conn, err := d.Open(context.Background(), driver.ConnectParams{
+		Extra: mock.Config{
+			TotalRows: total,
+			Columns: []driver.ColumnMeta{
+				{Name: "id", Type: "int8"},
+				{Name: "name", Type: "text"},
+			},
+		},
+	})
+	if err != nil {
+		return bench.Measurement{}, err
+	}
+	defer func() { _ = conn.Close() }()
+	mgr := pager.NewManager(conn, "mock", time.Now)
+	mgr.SetMockTotal(total)
+	ctx := context.Background()
+	open, err := mgr.Open(ctx, pager.Source{
+		Kind:       pager.SourceTable,
+		Schema:     "public",
+		Table:      "big",
+		KeyColumns: []string{"id"},
+	})
+	if err != nil {
+		return bench.Measurement{}, err
+	}
+	if err := pager.ScrollEndWindows(ctx, mgr, open.RID, total, pager.DefaultWindowRows); err != nil {
+		return bench.Measurement{}, err
+	}
+	rss, err := bench.RSSMegabytes()
+	if err != nil {
+		return bench.Measurement{Skipped: true, Reason: err.Error()}, nil
+	}
+	return bench.Measurement{Value: rss}, nil
 }

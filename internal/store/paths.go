@@ -59,6 +59,11 @@ func (p Paths) SettingsJSON() string {
 	return filepath.Join(p.ConfigDir, "settings.json")
 }
 
+// SecretsBin is the encrypted secrets fallback file.
+func (p Paths) SecretsBin() string {
+	return filepath.Join(p.DataDir, "secrets.bin")
+}
+
 // EnsureConfig creates config (and parent) directories with restrictive permissions.
 func (p Paths) EnsureConfig() error {
 	if err := os.MkdirAll(p.ConfigDir, 0o700); err != nil {

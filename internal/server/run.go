@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/suhaasya/wisp-go/internal/api"
-	"github.com/suhaasya/wisp-go/internal/store"
 )
 
 // RuntimePaths are on-disk locations for the running instance.
@@ -24,18 +23,18 @@ type RuntimePaths struct {
 
 // StartConfig configures the primary wisp instance.
 type StartConfig struct {
-	Paths        RuntimePaths
-	Port         int
-	Dev          bool
-	IdleExit     time.Duration
-	LogLevel     string
-	Version      string
-	NoBrowser    bool
-	AppWindow    bool
-	Launcher     Launcher
-	AssetFS      fs.FS
-	RSSSample    func() (float64, error)
-	SettingsPath string
+	Paths         RuntimePaths
+	Port          int
+	Dev           bool
+	IdleExit      time.Duration
+	LogLevel      string
+	Version       string
+	NoBrowser     bool
+	AppWindow     bool
+	Launcher      Launcher
+	AssetFS       fs.FS
+	RSSSample     func() (float64, error)
+	SetupHandlers func(api.EventBroadcaster) (*api.AppHandlers, error)
 }
 
 // RunOrHandoff starts the primary server or handoffs to an existing instance.
@@ -184,13 +183,14 @@ func RunStop(paths RuntimePaths) error {
 func registerRoutes(root *http.ServeMux, cfg StartConfig, guard *Guard, secretPath string, hub *EventHub, version string) error {
 	root.Handle("/internal/handoff", api.NewHandoffHandler(secretPath, guard.MintLaunchURL))
 	inner := http.NewServeMux()
-	settingsStore := store.NewSettingsStore(cfg.SettingsPath)
-	if _, err := settingsStore.Load(); err != nil {
-		slog.Warn("settings load", "err", err)
+	if cfg.SetupHandlers == nil {
+		return fmt.Errorf("SetupHandlers required")
 	}
-	settingsHandler := api.NewSettingsHandler(settingsStore, hub)
-	snap := func() (map[string]any, error) { return settingsStore.DocumentJSON() }
-	guard.RegisterRoutes(inner, version, hub, settingsHandler, snap)
+	handlers, err := cfg.SetupHandlers(hub)
+	if err != nil {
+		return err
+	}
+	guard.RegisterRoutes(inner, version, hub, handlers.Settings, handlers.Secrets, handlers.HelloSettings)
 	assetFS := cfg.AssetFS
 	if assetFS == nil {
 		assetFS = emptyFS{}

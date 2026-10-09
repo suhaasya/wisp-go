@@ -6,8 +6,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/suhaasya/wisp-go/internal/api"
 	"github.com/suhaasya/wisp-go/internal/server"
 	"github.com/suhaasya/wisp-go/internal/store"
+	"github.com/zalando/go-keyring"
 )
 
 func testRuntimePaths(t *testing.T) server.RuntimePaths {
@@ -37,12 +39,18 @@ func TestIntegration_startHandoffStop(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	keyring.MockInit()
+	dir := t.TempDir()
+	sp := store.PathsFromDirs(dir, dir)
 	cfg := server.StartConfig{
 		Paths:     paths,
 		NoBrowser: true,
 		Launcher:  launcher,
 		IdleExit:  time.Hour,
 		LogLevel:  "debug",
+		SetupHandlers: func(hub api.EventBroadcaster) (*api.AppHandlers, error) {
+			return api.NewAppHandlers(sp.SettingsJSON(), sp, store.FakeKeyringProbe(store.KeyringProbeAvailable), hub)
+		},
 	}
 
 	start := time.Now()

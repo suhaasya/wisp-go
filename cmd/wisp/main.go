@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/suhaasya/wisp-go/internal/api"
 	"github.com/suhaasya/wisp-go/internal/bench"
 	"github.com/suhaasya/wisp-go/internal/server"
 	"github.com/suhaasya/wisp-go/internal/store"
@@ -72,17 +73,19 @@ func runServer(cfg RunConfig) {
 	}
 
 	startCfg := server.StartConfig{
-		Paths:        runtimePaths(paths),
-		Port:         cfg.Port,
-		Dev:          cfg.Dev,
-		IdleExit:     cfg.IdleExit,
-		LogLevel:     cfg.LogLevel,
-		Version:      version,
-		NoBrowser:    cfg.NoBrowser,
-		AppWindow:    cfg.AppWindow,
-		AssetFS:      web.DistFS(),
-		RSSSample:    bench.RSSMegabytes,
-		SettingsPath: paths.SettingsJSON(),
+		Paths:     runtimePaths(paths),
+		Port:      cfg.Port,
+		Dev:       cfg.Dev,
+		IdleExit:  cfg.IdleExit,
+		LogLevel:  cfg.LogLevel,
+		Version:   version,
+		NoBrowser: cfg.NoBrowser,
+		AppWindow: cfg.AppWindow,
+		AssetFS:   web.DistFS(),
+		RSSSample: bench.RSSMegabytes,
+		SetupHandlers: func(hub api.EventBroadcaster) (*api.AppHandlers, error) {
+			return api.NewAppHandlers(paths.SettingsJSON(), paths, nil, hub)
+		},
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())

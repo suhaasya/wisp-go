@@ -54,7 +54,25 @@ func (s *Session) Guard(sql string, confirmed bool) (WriteCheck, error) {
 	if s.profile.SafeMode && !confirmed {
 		return WriteNeedsConfirmation, nil
 	}
+	if IsDDL(sql) {
+		s.InvalidateMetadata()
+	}
 	return WriteAllowed, nil
+}
+
+// IsDDL reports whether sql is a data-definition statement.
+func IsDDL(sql string) bool {
+	s := stripSQLComments(strings.TrimSpace(sql))
+	if s == "" {
+		return false
+	}
+	kw, _ := firstKeyword(s)
+	switch kw {
+	case "CREATE", "ALTER", "DROP", "TRUNCATE", "RENAME":
+		return true
+	default:
+		return false
+	}
 }
 
 func stripSQLComments(s string) string {

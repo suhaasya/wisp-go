@@ -62,6 +62,15 @@ func TestGuardReadOnlyAllowsSelect(t *testing.T) {
 	}
 }
 
+func TestIsDDL(t *testing.T) {
+	if !session.IsDDL("CREATE TABLE t (id int)") {
+		t.Fatal("CREATE should be DDL")
+	}
+	if session.IsDDL("SELECT 1") {
+		t.Fatal("SELECT should not be DDL")
+	}
+}
+
 func TestGuardSafeModeNeedsConfirmation(t *testing.T) {
 	s := session.NewTestSession(store.Profile{SafeMode: true})
 	check, err := s.Guard("UPDATE t SET x=1", false)

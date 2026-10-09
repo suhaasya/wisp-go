@@ -60,6 +60,19 @@ func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case path != "" && r.Method == http.MethodDelete:
 		h.delete(w, r, path)
 	default:
+		if i := strings.Index(path, "/"); i > 0 {
+			sid, rest := path[:i], path[i+1:]
+			switch rest {
+			case "schemas", "objects":
+				h.serveSchema(w, r, sid, rest)
+				return
+			default:
+				if strings.HasPrefix(rest, "tables/") {
+					h.serveSchema(w, r, sid, rest)
+					return
+				}
+			}
+		}
 		http.Error(w, "not found", http.StatusNotFound)
 	}
 }

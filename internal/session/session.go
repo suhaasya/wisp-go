@@ -23,6 +23,8 @@ type Session struct {
 	main driver.Conn
 	meta driver.Conn
 
+	metaCache *metadataCache
+
 	metaOnce sync.Once
 	metaErr  error
 

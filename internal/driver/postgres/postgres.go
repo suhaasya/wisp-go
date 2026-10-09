@@ -224,6 +224,9 @@ func (r *pgRows) Close() error {
 
 type pgDialect struct{}
 
+// Dialect returns the PostgreSQL SQL dialect (for sqlgen and tests).
+func Dialect() driver.Dialect { return pgDialect{} }
+
 func (pgDialect) Name() string { return "postgres" }
 
 func (pgDialect) QuoteIdent(name string) string {

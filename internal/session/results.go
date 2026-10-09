@@ -7,6 +7,7 @@ import (
 
 	"github.com/suhaasya/wisp-go/internal/driver"
 	"github.com/suhaasya/wisp-go/internal/pager"
+	"github.com/suhaasya/wisp-go/internal/sqlgen"
 )
 
 var errSessionNotReady = errors.New("session: not ready")
@@ -33,6 +34,17 @@ func (s *Session) OpenResult(ctx context.Context, src pager.Source) (pager.OpenR
 					src.Columns = append(src.Columns, driver.ColumnMeta{Name: c.Name, Type: c.Type})
 				}
 			}
+		}
+		sqlText, err := sqlgen.BrowseSQLForGuard(s.main.Dialect(), pager.BrowseSQLSpec(src))
+		if err != nil {
+			return pager.OpenResult{}, err
+		}
+		check, err := s.Guard(sqlText, false)
+		if err != nil {
+			return pager.OpenResult{}, err
+		}
+		if check == WriteBlocked {
+			return pager.OpenResult{}, ErrWriteBlockedReadOnly()
 		}
 	}
 	if src.Kind == pager.SourceQuery {

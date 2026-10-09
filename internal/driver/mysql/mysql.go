@@ -386,6 +386,14 @@ type myDialect struct {
 	engine string
 }
 
+// Dialect returns the MySQL/MariaDB SQL dialect (for sqlgen and tests).
+func Dialect(engine string) driver.Dialect {
+	if engine == "" {
+		engine = "mysql"
+	}
+	return myDialect{engine: engine}
+}
+
 func (d myDialect) Name() string { return d.engine }
 
 func (d myDialect) QuoteIdent(name string) string {

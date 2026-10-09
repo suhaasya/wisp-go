@@ -35,11 +35,37 @@ export const shellConnection = signal<ShellConnection | null>(null);
 export const sessionEngine = signal<string>("postgres");
 export const workspaceProfileId = signal<string | null>(null);
 
+export type TableFilterCondition = {
+  column: string;
+  op: string;
+  value: string;
+  value2?: string;
+};
+
+export type TableBrowseFilter = {
+  logic: "and" | "or";
+  conditions: TableFilterCondition[];
+};
+
+export type TableSortKey = {
+  column: string;
+  desc: boolean;
+};
+
+export type TableBrowseQuery = {
+  rawMode: boolean;
+  rawWhere: string;
+  filter: TableBrowseFilter;
+  sort: TableSortKey[];
+};
+
 export type WorkspaceTableTab = {
   id: string;
   schema: string;
   table: string;
   mode: "data" | "structure";
+  /** Applied filter/sort; refetch only when this changes (Apply). */
+  browseQuery?: TableBrowseQuery;
 };
 
 export const workspaceTabs = signal<WorkspaceTableTab[]>([]);

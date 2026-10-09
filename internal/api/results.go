@@ -8,17 +8,65 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/suhaasya/wisp-go/internal/pager"
+	"github.com/suhaasya/wisp-go/internal/sqlgen"
 )
 
 type openResultRequest struct {
-	Source resultSourceDTO `json:"source"`
+	Source pagerSourceDTO `json:"source"`
 }
 
-type resultSourceDTO struct {
-	Kind   string `json:"kind"`
-	Schema string `json:"schema,omitempty"`
-	Table  string `json:"table,omitempty"`
-	SQL    string `json:"sql,omitempty"`
+type pagerSourceDTO struct {
+	Kind     string         `json:"kind"`
+	Schema   string         `json:"schema,omitempty"`
+	Table    string         `json:"table,omitempty"`
+	SQL      string         `json:"sql,omitempty"`
+	Filter   filterGroupDTO `json:"filter,omitempty"`
+	RawWhere string         `json:"rawWhere,omitempty"`
+	Sort     []sortKeyDTO   `json:"sort,omitempty"`
+}
+
+type filterGroupDTO struct {
+	Logic      string               `json:"logic"`
+	Conditions []filterConditionDTO `json:"conditions"`
+}
+
+type filterConditionDTO struct {
+	Column string `json:"column"`
+	Op     string `json:"op"`
+	Value  string `json:"value"`
+	Value2 string `json:"value2,omitempty"`
+}
+
+type sortKeyDTO struct {
+	Column string `json:"column"`
+	Desc   bool   `json:"desc"`
+}
+
+func sourceFromDTO(d pagerSourceDTO) pager.Source {
+	var conds []sqlgen.FilterCondition
+	for _, c := range d.Filter.Conditions {
+		conds = append(conds, sqlgen.FilterCondition{
+			Column: c.Column,
+			Op:     c.Op,
+			Value:  c.Value,
+			Value2: c.Value2,
+		})
+	}
+	var sort []sqlgen.SortKey
+	for _, s := range d.Sort {
+		sort = append(sort, sqlgen.SortKey{Column: s.Column, Desc: s.Desc})
+	}
+	return pager.Source{
+		Kind:     d.Kind,
+		Schema:   d.Schema,
+		Table:    d.Table,
+		SQL:      d.SQL,
+		Filter:   sqlgen.FilterGroup{Logic: d.Filter.Logic, Conditions: conds},
+		RawWhere: d.RawWhere,
+		Sort:     sort,
+	}
 }
 
 func (h *SessionsHandler) serveResults(w http.ResponseWriter, r *http.Request, sid, rest string) {
@@ -58,7 +106,7 @@ func (h *SessionsHandler) postResult(w http.ResponseWriter, r *http.Request, sid
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
-	out, err := s.OpenResultFromRequest(ctx, req.Source.Kind, req.Source.Schema, req.Source.Table, req.Source.SQL)
+	out, err := s.OpenResultFromRequest(ctx, sourceFromDTO(req.Source))
 	if err != nil {
 		writeError(w, http.StatusBadGateway, "result_open_failed", "Could not open result.", err.Error())
 		return

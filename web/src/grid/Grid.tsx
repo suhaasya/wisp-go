@@ -14,6 +14,8 @@ import {
   toggleRowSelection,
   type SelectionState,
 } from "./selection";
+import type { TableSortKey } from "../state";
+import { toggleSortDraft } from "../workspace/sort-draft";
 import { DEFAULT_WINDOW_ROWS, type ColumnMeta, type RowTotal, type WindowPayload } from "./window";
 
 export type GridProps = {
@@ -23,6 +25,8 @@ export type GridProps = {
   total: RowTotal;
   schema: string;
   table: string;
+  sortDraft?: TableSortKey[];
+  onSortDraftChange?: (sort: TableSortKey[]) => void;
   fetchWindow?: (offset: number, signal: AbortSignal) => Promise<WindowPayload>;
 };
 
@@ -44,6 +48,12 @@ export function Grid(props: GridProps) {
   const lastFetch = useSignal<string>("—");
   const totalRows = props.total.value;
 
+  const headerApiRef = useRef<ReturnType<typeof createGridHeader> | null>(null);
+
+  useEffect(() => {
+    headerApiRef.current?.setSortDraft(props.sortDraft ?? []);
+  }, [props.sortDraft]);
+
   useEffect(() => {
     const scrollEl = scrollRef.current;
     const headerMount = headerMountRef.current;
@@ -59,6 +69,13 @@ export function Grid(props: GridProps) {
     let pool: RowPool | null = null;
 
     const header = createGridHeader(headerMount, columns.value, {
+      sortDraft: props.sortDraft ?? [],
+      onSortClick(colId, shiftKey) {
+        if (!props.onSortDraftChange) {
+          return;
+        }
+        props.onSortDraftChange(toggleSortDraft(props.sortDraft ?? [], colId, shiftKey));
+      },
       onResize(colId, width) {
         columns.value = columns.value.map((c) =>
           c.id === colId ? { ...c, width: clampColumnWidth(width) } : c,
@@ -97,6 +114,8 @@ export function Grid(props: GridProps) {
         return fetchResultWindow(props.sessionId, props.rid, offset, DEFAULT_WINDOW_ROWS, signal);
       },
     });
+
+    headerApiRef.current = header;
 
     pool = createRowPool({
       scrollEl,
@@ -160,9 +179,10 @@ export function Grid(props: GridProps) {
       hostRef.current?.removeEventListener("keydown", onKeyDown);
       pool?.destroy();
       header.destroy();
+      headerApiRef.current = null;
       buffer.destroy();
     };
-  }, [props.sessionId, props.rid, props.schema, props.table, props.fetchWindow]);
+  }, [props.sessionId, props.rid, props.schema, props.table, props.fetchWindow, props.onSortDraftChange]);
 
   const totalLabel =
     props.total.kind === "estimate"

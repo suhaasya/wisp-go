@@ -1,3 +1,5 @@
+import type { TableSortKey } from "../state";
+import { sortRank } from "../workspace/sort-draft";
 import {
   clampColumnWidth,
   columnWindow,
@@ -10,10 +12,13 @@ export type HeaderCallbacks = {
   onResize: (colId: string, width: number) => void;
   onReorder: (fromId: string, toId: string) => void;
   onHide: (colId: string) => void;
+  onSortClick: (colId: string, shiftKey: boolean) => void;
+  sortDraft: TableSortKey[];
 };
 
 export type GridHeader = {
   setColumns: (columns: GridColumn[]) => void;
+  setSortDraft: (sort: TableSortKey[]) => void;
   setHorizontalScroll: (scrollLeft: number, viewportWidth: number) => void;
   destroy: () => void;
 };
@@ -39,6 +44,7 @@ export function createGridHeader(
   root.appendChild(row);
 
   let cols = columns;
+  let sortDraft = callbacks.sortDraft;
   let scrollLeft = 0;
   let viewportWidth = 800;
   let lastWindowKey = "";
@@ -77,10 +83,22 @@ export function createGridHeader(
       th.dataset.colId = col.id;
       th.draggable = true;
 
+      const rank = sortRank(sortDraft, col.meta.name);
       const name = document.createElement("div");
       name.className = "truncate font-sans text-12-5 font-medium text-ink-2";
-      name.textContent = col.meta.name;
+      if (rank >= 0) {
+        const arrow = sortDraft[rank]?.desc ? " ↓" : " ↑";
+        name.textContent = col.meta.name + arrow + (rank > 0 ? ` ${rank + 1}` : "");
+      } else {
+        name.textContent = col.meta.name;
+      }
       th.appendChild(name);
+      th.addEventListener("click", (e) => {
+        if (resizeCol) {
+          return;
+        }
+        callbacks.onSortClick(col.meta.name, (e as MouseEvent).shiftKey);
+      });
       const small = document.createElement("div");
       small.className = "mt-0.5 truncate font-mono text-11-5 font-normal text-ink-3";
       small.textContent = col.meta.type;
@@ -138,6 +156,10 @@ export function createGridHeader(
     setColumns(next: GridColumn[]) {
       cols = next;
       lastWindowKey = "";
+      render();
+    },
+    setSortDraft(next: TableSortKey[]) {
+      sortDraft = next;
       render();
     },
     setHorizontalScroll(left: number, width: number) {

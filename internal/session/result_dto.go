@@ -14,9 +14,8 @@ type ResultOpenResponse struct {
 	Total   pager.Total         `json:"total"`
 }
 
-// OpenResultFromRequest opens a result from API fields.
-func (s *Session) OpenResultFromRequest(ctx context.Context, kind, schema, table, sql string) (ResultOpenResponse, error) {
-	src := pager.Source{Kind: kind, Schema: schema, Table: table, SQL: sql}
+// OpenResultFromRequest opens a result from API source JSON.
+func (s *Session) OpenResultFromRequest(ctx context.Context, src pager.Source) (ResultOpenResponse, error) {
 	out, err := s.OpenResult(ctx, src)
 	if err != nil {
 		return ResultOpenResponse{}, err

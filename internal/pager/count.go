@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/suhaasya/wisp-go/internal/driver"
+	"github.com/suhaasya/wisp-go/internal/sqlgen"
 )
 
 func estimateTableRows(ctx context.Context, conn driver.Conn, engine, schema, table string) (int64, error) {
@@ -63,9 +64,20 @@ func (m *Manager) ExactCount(ctx context.Context, rid string) (Total, error) {
 	if r.source.Kind != SourceTable {
 		return Total{}, fmt.Errorf("pager: count only for table results")
 	}
-	d := m.conn.Dialect()
-	table := d.QuoteIdent(r.source.Schema) + "." + d.QuoteIdent(r.source.Table)
-	n, err := exactCount(ctx, m.conn, table, "")
+	var n int64
+	var err error
+	if sourceHasBrowseFilter(r.source) {
+		spec := browseSpecFromSource(r.source)
+		sqlText, args, buildErr := sqlgen.BuildTableCount(m.conn.Dialect(), spec)
+		if buildErr != nil {
+			return Total{}, buildErr
+		}
+		n, err = scalarInt64(ctx, m.conn, sqlText, args...)
+	} else {
+		d := m.conn.Dialect()
+		table := d.QuoteIdent(r.source.Schema) + "." + d.QuoteIdent(r.source.Table)
+		n, err = exactCount(ctx, m.conn, table, "")
+	}
 	if err != nil {
 		return Total{}, err
 	}

@@ -10,6 +10,7 @@ import (
 	"encoding/hex"
 
 	"github.com/suhaasya/wisp-go/internal/driver"
+	"github.com/suhaasya/wisp-go/internal/sqlgen"
 )
 
 const (
@@ -26,12 +27,15 @@ const (
 
 // Source describes how to open a result.
 type Source struct {
-	Kind       string
-	Schema     string
-	Table      string
-	SQL        string
-	KeyColumns []string
-	Columns    []driver.ColumnMeta
+	Kind       string              `json:"kind"`
+	Schema     string              `json:"schema,omitempty"`
+	Table      string              `json:"table,omitempty"`
+	SQL        string              `json:"sql,omitempty"`
+	KeyColumns []string            `json:"-"`
+	Columns    []driver.ColumnMeta `json:"-"`
+	Filter     sqlgen.FilterGroup  `json:"filter,omitempty"`
+	RawWhere   string              `json:"rawWhere,omitempty"`
+	Sort       []sqlgen.SortKey    `json:"sort,omitempty"`
 }
 
 // Total describes row count kind and value.

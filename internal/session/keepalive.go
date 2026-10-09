@@ -3,6 +3,8 @@ package session
 import (
 	"context"
 	"time"
+
+	"github.com/suhaasya/wisp-go/internal/driver"
 )
 
 const (
@@ -37,12 +39,11 @@ func (s *Session) keepAliveOnce(ctx context.Context, sleep func(time.Duration)) 
 	if st == StateBusy || st == StateClosed || st == StateFailed || st == StateReconnecting {
 		return
 	}
-	meta, err := s.metadataConn(ctx)
+	err := s.withMetaConn(ctx, func(ctx context.Context, meta driver.Conn) error {
+		_, err := meta.Ping(ctx)
+		return err
+	})
 	if err != nil {
-		s.startReconnect(ctx, sleep, err)
-		return
-	}
-	if _, err := meta.Ping(ctx); err != nil {
 		s.startReconnect(ctx, sleep, err)
 	}
 }
@@ -91,6 +92,7 @@ func (s *Session) tryReconnect(ctx context.Context) bool {
 	s.serverInfo = info
 	s.releaseSSH = release
 	s.mu.Unlock()
+	s.InvalidateMetadata()
 	s.setState(StateReady)
 	return true
 }

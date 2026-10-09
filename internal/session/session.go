@@ -116,10 +116,25 @@ func (s *Session) keepAliveSec() int {
 	return defaultKeepSec
 }
 
-func (s *Session) metadataConn(ctx context.Context) (driver.Conn, error) {
-	_ = ctx // open uses its own timeout; callers pass request ctx for queries on meta
+func (s *Session) withMetaConn(ctx context.Context, fn func(context.Context, driver.Conn) error) error {
 	s.metaInitMu.Lock()
 	defer s.metaInitMu.Unlock()
+	run := func() error {
+		conn, err := s.openMetaLocked()
+		if err != nil {
+			return err
+		}
+		return fn(ctx, conn)
+	}
+	err := run()
+	if err != nil && isConnError(err) {
+		s.closeMetaLocked()
+		return run()
+	}
+	return err
+}
+
+func (s *Session) openMetaLocked() (driver.Conn, error) {
 	if s.meta != nil {
 		return s.meta, nil
 	}
@@ -137,18 +152,26 @@ func (s *Session) metadataConn(ctx context.Context) (driver.Conn, error) {
 	return s.meta, nil
 }
 
-func (s *Session) closeConns() {
+func (s *Session) closeMetaLocked() {
 	if s.meta != nil {
 		_ = s.meta.Close()
 		s.meta = nil
 	}
-	if s.main != nil {
-		_ = s.main.Close()
-		s.main = nil
-	}
 	if s.releaseMetaSSH != nil {
 		s.releaseMetaSSH()
 		s.releaseMetaSSH = nil
+	}
+}
+
+func (s *Session) closeConns() {
+	s.metaInitMu.Lock()
+	defer s.metaInitMu.Unlock()
+	s.closeMetaLocked()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.main != nil {
+		_ = s.main.Close()
+		s.main = nil
 	}
 	if s.releaseSSH != nil {
 		s.releaseSSH()

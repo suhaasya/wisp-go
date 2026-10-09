@@ -149,29 +149,30 @@ func introspectorFor(engine string, conn driver.Conn) driver.Introspector {
 
 // SchemaSnapshot lists databases and schemas for the connected engine.
 func (s *Session) SchemaSnapshot(ctx context.Context) (databases, schemas []string, err error) {
-	conn, err := s.metadataConn(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
-	intr := introspectorFor(s.Profile().Engine, conn)
-	if intr == nil {
-		return nil, nil, errBadEngine
-	}
-	switch s.Profile().Engine {
-	case "postgres":
-		schemas, err = intr.Schemas(ctx)
-		if err != nil {
-			return nil, nil, err
+	engine := s.Profile().Engine
+	err = s.withMetaConn(ctx, func(ctx context.Context, conn driver.Conn) error {
+		intr := introspectorFor(engine, conn)
+		if intr == nil {
+			return errBadEngine
 		}
-		databases, err = intr.Databases(ctx)
-		if err != nil {
-			return nil, schemas, nil
+		switch engine {
+		case "postgres":
+			schemas, err = intr.Schemas(ctx)
+			if err != nil {
+				return err
+			}
+			databases, err = intr.Databases(ctx)
+			if err != nil {
+				databases = nil
+				err = nil
+			}
+			return nil
+		default:
+			databases, err = intr.Databases(ctx)
+			return err
 		}
-		return databases, schemas, nil
-	default:
-		databases, err = intr.Databases(ctx)
-		return databases, nil, err
-	}
+	})
+	return databases, schemas, err
 }
 
 // ListObjects returns cached object names for a schema and kind.
@@ -189,15 +190,16 @@ func (s *Session) ListObjects(ctx context.Context, schema string, kind driver.Ob
 	}
 	cache.mu.Unlock()
 
-	conn, err := s.metadataConn(ctx)
-	if err != nil {
-		return nil, err
-	}
-	intr := introspectorFor(s.Profile().Engine, conn)
-	if intr == nil {
-		return nil, errBadEngine
-	}
-	names, err := intr.Objects(ctx, schema, kind)
+	var names []string
+	err := s.withMetaConn(ctx, func(ctx context.Context, conn driver.Conn) error {
+		intr := introspectorFor(s.Profile().Engine, conn)
+		if intr == nil {
+			return errBadEngine
+		}
+		var err error
+		names, err = intr.Objects(ctx, schema, kind)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -222,15 +224,16 @@ func (s *Session) TableMetadata(ctx context.Context, schema, table string, refre
 	}
 	cache.mu.Unlock()
 
-	conn, err := s.metadataConn(ctx)
-	if err != nil {
-		return nil, err
-	}
-	intr := introspectorFor(s.Profile().Engine, conn)
-	if intr == nil {
-		return nil, errBadEngine
-	}
-	det, err := intr.TableDetails(ctx, schema, table)
+	var det *driver.TableDetails
+	err := s.withMetaConn(ctx, func(ctx context.Context, conn driver.Conn) error {
+		intr := introspectorFor(s.Profile().Engine, conn)
+		if intr == nil {
+			return errBadEngine
+		}
+		var err error
+		det, err = intr.TableDetails(ctx, schema, table)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -56,12 +56,13 @@ func TestMetadataConnNotOpenedWithCanceledContext(t *testing.T) {
 	canceled, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	conn, err := s.metadataConn(canceled)
-	if err != nil {
-		t.Fatalf("metadataConn: %v", err)
-	}
-	if conn == nil {
-		t.Fatal("expected meta conn")
+	if err := s.withMetaConn(canceled, func(_ context.Context, conn driver.Conn) error {
+		if conn == nil {
+			t.Fatal("expected meta conn")
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("withMetaConn: %v", err)
 	}
 }
 
@@ -85,10 +86,10 @@ func TestMetadataConnRetriesAfterFailedOpen(t *testing.T) {
 	}
 	s.mu.Unlock()
 
-	if _, err := s.metadataConn(context.Background()); err == nil {
+	if err := s.withMetaConn(context.Background(), func(context.Context, driver.Conn) error { return nil }); err == nil {
 		t.Fatal("expected first failure")
 	}
-	if _, err := s.metadataConn(context.Background()); err != nil {
+	if err := s.withMetaConn(context.Background(), func(context.Context, driver.Conn) error { return nil }); err != nil {
 		t.Fatalf("second open: %v", err)
 	}
 	if attempts != 2 {

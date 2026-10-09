@@ -1,0 +1,1 @@
+{"columns":[{"name":"id","type":"int8"},{"name":"status","type":"order_status"}],"data":[[1248920,1248919],["paid","shipped"]],"nulls":[[],[1]],"truncated":[[],[]]}

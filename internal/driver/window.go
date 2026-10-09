@@ -133,6 +133,77 @@ func (w *Window) Column(i int) *ColumnBuilder {
 	return &ColumnBuilder{w: w, data: &w.cols[i]}
 }
 
+// CellInt reads an int64 column at row (for tests and pager).
+func (w *Window) CellInt(col, row int) (int64, bool) {
+	if col < 0 || col >= len(w.cols) || row < 0 || row >= w.Rows {
+		return 0, false
+	}
+	cd := &w.cols[col]
+	if cd.kind != colInt {
+		return 0, false
+	}
+	if isNullRow(cd.nulls, row) {
+		return 0, false
+	}
+	return cd.ints[row], true
+}
+
+// CellFloat reads a float64 column at row.
+func (w *Window) CellFloat(col, row int) (float64, bool) {
+	if col < 0 || col >= len(w.cols) || row < 0 || row >= w.Rows {
+		return 0, false
+	}
+	cd := &w.cols[col]
+	if cd.kind != colFloat {
+		return 0, false
+	}
+	if isNullRow(cd.nulls, row) {
+		return 0, false
+	}
+	return cd.floats[row], true
+}
+
+// CellBool reads a bool column at row.
+func (w *Window) CellBool(col, row int) (bool, bool) {
+	if col < 0 || col >= len(w.cols) || row < 0 || row >= w.Rows {
+		return false, false
+	}
+	cd := &w.cols[col]
+	if cd.kind != colBool {
+		return false, false
+	}
+	if isNullRow(cd.nulls, row) {
+		return false, false
+	}
+	return cd.bools[row], true
+}
+
+// CellText reads a text arena column at row.
+func (w *Window) CellText(col, row int) (string, bool) {
+	if col < 0 || col >= len(w.cols) || row < 0 || row >= w.Rows {
+		return "", false
+	}
+	cd := &w.cols[col]
+	if cd.kind != colText {
+		return "", false
+	}
+	if isNullRow(cd.nulls, row) {
+		return "", false
+	}
+	off := w.textOffsets[cd.offsetOff : cd.offsetOff+cd.offsetLen]
+	start, end := off[row], off[row+1]
+	return string(w.arena[start:end]), true
+}
+
+func isNullRow(nulls []int, row int) bool {
+	for _, n := range nulls {
+		if n == row {
+			return true
+		}
+	}
+	return false
+}
+
 func (b *ColumnBuilder) SetInt(row int, v int64) {
 	b.data.ints[row] = v
 }

@@ -15,6 +15,102 @@ services:
       timeout: 5s
       retries: 10
 
+  pg12:
+    image: postgres:12
+    environment:
+      POSTGRES_USER: wisp
+      POSTGRES_PASSWORD: wisp
+      POSTGRES_DB: wisp_bench
+    ports:
+      - "54312:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wisp -d wisp_bench"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pg13:
+    image: postgres:13
+    environment:
+      POSTGRES_USER: wisp
+      POSTGRES_PASSWORD: wisp
+      POSTGRES_DB: wisp_bench
+    ports:
+      - "54313:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wisp -d wisp_bench"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pg14:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: wisp
+      POSTGRES_PASSWORD: wisp
+      POSTGRES_DB: wisp_bench
+    ports:
+      - "54314:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wisp -d wisp_bench"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pg15:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: wisp
+      POSTGRES_PASSWORD: wisp
+      POSTGRES_DB: wisp_bench
+    ports:
+      - "54315:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wisp -d wisp_bench"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pg16:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: wisp
+      POSTGRES_PASSWORD: wisp
+      POSTGRES_DB: wisp_bench
+    ports:
+      - "54316:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wisp -d wisp_bench"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  pg17:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: wisp
+      POSTGRES_PASSWORD: wisp
+      POSTGRES_DB: wisp_bench
+    ports:
+      - "54317:5432"
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wisp -d wisp_bench"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   mysql:
     image: mysql:8.4
     environment:

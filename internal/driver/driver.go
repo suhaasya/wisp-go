@@ -42,12 +42,19 @@ type ConnectParams struct {
 	DB    string
 	User  string
 	Extra any // engine-specific; mock.Config for mock driver
+
+	Password         []byte
+	PgPassFile       string
+	ConnectTimeout   time.Duration
+	StatementTimeout time.Duration
 }
 
 // ServerInfo describes the connected server.
 type ServerInfo struct {
-	Version string
-	Engine  string
+	Version  string
+	Engine   string
+	Database string
+	User     string
 }
 
 // ExecResult summarizes a non-query statement.

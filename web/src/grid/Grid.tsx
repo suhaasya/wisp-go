@@ -69,6 +69,8 @@ export function Grid(props: GridProps) {
   const headerApiRef = useRef<ReturnType<typeof createGridHeader> | null>(null);
   const bufferRef = useRef<ReturnType<typeof createWindowBuffer> | null>(null);
   const poolRef = useRef<RowPool | null>(null);
+  const onToggleDetailRef = useRef(props.onToggleDetail);
+  onToggleDetailRef.current = props.onToggleDetail;
 
   useEffect(() => {
     headerApiRef.current?.setSortDraft(props.sortDraft ?? []);
@@ -127,7 +129,10 @@ export function Grid(props: GridProps) {
     bufferRef.current = createWindowBuffer({
       windowRows: DEFAULT_WINDOW_ROWS,
       maxWindows: 3,
-      onUpdate: () => pool?.scheduleLayout(),
+      onUpdate: () => {
+        pool?.resetViewportFetch();
+        pool?.scheduleLayout();
+      },
       fetch: (offset, signal) => {
         if (props.fetchWindow) {
           return props.fetchWindow(offset, signal);
@@ -246,7 +251,7 @@ export function Grid(props: GridProps) {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === " " && e.target === hostRef.current) {
         e.preventDefault();
-        props.onToggleDetail?.();
+        onToggleDetailRef.current?.();
         return;
       }
       if (e.key === "Enter" && props.editable && selection.value.kind === "cell") {
@@ -316,7 +321,6 @@ export function Grid(props: GridProps) {
     props.onSortDraftChange,
     props.onSelectionChange,
     props.onGridReady,
-    props.onToggleDetail,
     props.editable,
     props.primaryKey,
     props.onStagedCount,

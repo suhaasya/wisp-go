@@ -31,6 +31,7 @@ export type RowPoolOptions = {
 export type RowPool = {
   setColumns: (columns: GridColumn[]) => void;
   setTotalRows: (n: number, total: RowTotal) => void;
+  resetViewportFetch: () => void;
   scheduleLayout: () => void;
   layoutNow: () => void;
   rowElementCount: () => number;
@@ -319,6 +320,11 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
     }
   }
 
+  function resetViewportFetch(): void {
+    lastFetchFirst = -1;
+    lastFetchLast = -1;
+  }
+
   function scheduleLayout(): void {
     if (raf) {
       return;
@@ -335,15 +341,16 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
     setColumns(next) {
       columns = next;
       lastColWinKey = "";
-      lastFetchFirst = -1;
-      lastFetchLast = -1;
+      resetViewportFetch();
       scheduleLayout();
     },
     setTotalRows(n, t) {
       totalRows = n;
       total = t;
+      resetViewportFetch();
       scheduleLayout();
     },
+    resetViewportFetch,
     scheduleLayout,
     layoutNow: layout,
     rowElementCount: () => poolSize,

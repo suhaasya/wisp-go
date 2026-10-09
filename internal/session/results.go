@@ -12,13 +12,34 @@ import (
 
 var errSessionNotReady = errors.New("session: not ready")
 
+func (s *Session) mainConn() driver.Conn {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.main
+}
+
 func (s *Session) ensurePager() *pager.Manager {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.pager == nil && s.main != nil {
-		s.pager = pager.NewManager(s.main, s.profile.Engine, time.Now)
+	if s.main == nil {
+		s.mu.Unlock()
+		return nil
 	}
-	return s.pager
+	if s.pager != nil && s.pagerMain != s.main {
+		stale := s.pager
+		s.pager = nil
+		s.pagerMain = nil
+		s.mu.Unlock()
+		stale.CloseAll()
+		s.mu.Lock()
+	}
+	if s.pager == nil {
+		s.pager = pager.NewManager(s.main, s.profile.Engine, time.Now)
+		s.pagerMain = s.main
+		s.pager.SetOverlayProvider(s.resultOverlay)
+	}
+	p := s.pager
+	s.mu.Unlock()
+	return p
 }
 
 // OpenResult opens a table browse or query result on the main connection.
@@ -35,7 +56,11 @@ func (s *Session) OpenResult(ctx context.Context, src pager.Source) (pager.OpenR
 				}
 			}
 		}
-		sqlText, err := sqlgen.BrowseSQLForGuard(s.main.Dialect(), pager.BrowseSQLSpec(src))
+		main := s.mainConn()
+		if main == nil {
+			return pager.OpenResult{}, errSessionNotReady
+		}
+		sqlText, err := sqlgen.BrowseSQLForGuard(main.Dialect(), pager.BrowseSQLSpec(src))
 		if err != nil {
 			return pager.OpenResult{}, err
 		}
@@ -64,7 +89,7 @@ func (s *Session) OpenResult(ctx context.Context, src pager.Source) (pager.OpenR
 	if err != nil {
 		return pager.OpenResult{}, err
 	}
-	s.registerResultChanges(open.RID, src.KeyColumns)
+	s.registerResultChanges(open.RID, src.KeyColumns, src.Schema, src.Table)
 	s.wirePagerOverlay()
 	return open, nil
 }
@@ -108,6 +133,7 @@ func (s *Session) closeResults() {
 	s.mu.Lock()
 	p := s.pager
 	s.pager = nil
+	s.pagerMain = nil
 	s.mu.Unlock()
 	if p != nil {
 		p.CloseAll()

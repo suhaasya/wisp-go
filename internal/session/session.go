@@ -25,6 +25,7 @@ type Session struct {
 	meta driver.Conn
 
 	pager     *pager.Manager
+	pagerMain driver.Conn
 	metaCache *metadataCache
 
 	changeMu      sync.RWMutex

@@ -172,6 +172,14 @@ type pgTx struct {
 	tx pgx.Tx
 }
 
+func (t *pgTx) Exec(ctx context.Context, sql string, args ...any) (driver.ExecResult, error) {
+	tag, err := t.tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return driver.ExecResult{}, err
+	}
+	return driver.ExecResult{RowsAffected: tag.RowsAffected()}, nil
+}
+
 func (t *pgTx) Commit(ctx context.Context) error   { return t.tx.Commit(ctx) }
 func (t *pgTx) Rollback(ctx context.Context) error { return t.tx.Rollback(ctx) }
 

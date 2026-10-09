@@ -34,6 +34,7 @@ type Rows interface {
 
 // Tx is an open transaction.
 type Tx interface {
+	Exec(ctx context.Context, sql string, args ...any) (ExecResult, error)
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }

@@ -77,6 +77,7 @@ func (s *Session) startReconnect(ctx context.Context, sleep func(time.Duration),
 }
 
 func (s *Session) tryReconnect(ctx context.Context) bool {
+	s.closeResults()
 	s.closeConns()
 	main, info, release, err := s.connector.Connect(ctx, s.profile, s.dbPassword, s.sshSec)
 	if err != nil {

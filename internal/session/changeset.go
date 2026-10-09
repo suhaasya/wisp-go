@@ -25,9 +25,10 @@ type Change struct {
 type ChangeSet struct {
 	keyCols []string
 
-	updates map[string]map[string]stagedCell
-	inserts map[string]map[string]stagedCell
-	deletes map[string]struct{}
+	updates  map[string]map[string]stagedCell
+	inserts  map[string]map[string]stagedCell
+	deletes  map[string]struct{}
+	pkValues map[string][]any
 
 	insertSeq     int
 	lastInsertKey string
@@ -43,10 +44,11 @@ type stagedCell struct {
 // NewChangeSet returns an empty change set for a table with the given key columns.
 func NewChangeSet(keyCols []string) *ChangeSet {
 	return &ChangeSet{
-		keyCols: append([]string(nil), keyCols...),
-		updates: make(map[string]map[string]stagedCell),
-		inserts: make(map[string]map[string]stagedCell),
-		deletes: make(map[string]struct{}),
+		keyCols:  append([]string(nil), keyCols...),
+		updates:  make(map[string]map[string]stagedCell),
+		inserts:  make(map[string]map[string]stagedCell),
+		deletes:  make(map[string]struct{}),
+		pkValues: make(map[string][]any),
 	}
 }
 
@@ -86,8 +88,17 @@ func (cs *ChangeSet) Discard() {
 	cs.updates = make(map[string]map[string]stagedCell)
 	cs.inserts = make(map[string]map[string]stagedCell)
 	cs.deletes = make(map[string]struct{})
+	cs.pkValues = make(map[string][]any)
 	cs.insertSeq = 0
 	cs.lastInsertKey = ""
+}
+
+func (cs *ChangeSet) rememberPK(key string, row []any) {
+	if len(row) == 0 {
+		return
+	}
+	cp := append([]any(nil), row...)
+	cs.pkValues[key] = cp
 }
 
 // Apply merges one change into the set.
@@ -117,6 +128,9 @@ func (cs *ChangeSet) applySet(c Change) error {
 	}
 	if _, deleted := cs.deletes[key]; deleted {
 		return errors.New("changeset: row deleted")
+	}
+	if !ins {
+		cs.rememberPK(key, c.Row)
 	}
 	cell := stagedCell{
 		value:    c.Value,
@@ -174,6 +188,7 @@ func (cs *ChangeSet) applyDelete(c Change) error {
 		delete(cs.inserts, key)
 		return nil
 	}
+	cs.rememberPK(key, c.Row)
 	delete(cs.updates, key)
 	cs.deletes[key] = struct{}{}
 	return nil

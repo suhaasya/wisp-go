@@ -123,6 +123,45 @@ export async function postResultChange(
   );
 }
 
+export type ReviewSQLResponse = {
+  sql: string;
+  count: number;
+  statements: number;
+  table: string;
+  schema: string;
+  needsDeleteConfirm?: boolean;
+  warning?: string;
+};
+
+export async function fetchReviewSQL(
+  sessionId: string,
+  rid: string,
+  signal?: AbortSignal,
+): Promise<ReviewSQLResponse> {
+  return request<ReviewSQLResponse>(
+    "GET",
+    `/api/v1/sessions/${encodeURIComponent(sessionId)}/results/${encodeURIComponent(rid)}/changes/sql`,
+    undefined,
+    { signal },
+  );
+}
+
+export type CommitChangesResponse = { committed: number };
+
+export async function commitResultChanges(
+  sessionId: string,
+  rid: string,
+  body: { tableConfirm?: string },
+  signal?: AbortSignal,
+): Promise<CommitChangesResponse> {
+  return request<CommitChangesResponse>(
+    "POST",
+    `/api/v1/sessions/${encodeURIComponent(sessionId)}/results/${encodeURIComponent(rid)}/changes/commit`,
+    body,
+    { signal },
+  );
+}
+
 export async function discardResultChanges(
   sessionId: string,
   rid: string,

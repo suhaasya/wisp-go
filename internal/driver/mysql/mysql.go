@@ -309,6 +309,15 @@ type sqlTx struct {
 	tx *sql.Tx
 }
 
+func (t *sqlTx) Exec(ctx context.Context, sql string, args ...any) (driver.ExecResult, error) {
+	res, err := t.tx.ExecContext(ctx, sql, args...)
+	if err != nil {
+		return driver.ExecResult{}, err
+	}
+	n, _ := res.RowsAffected()
+	return driver.ExecResult{RowsAffected: n}, nil
+}
+
 func (t *sqlTx) Commit(ctx context.Context) error   { return t.tx.Commit() }
 func (t *sqlTx) Rollback(ctx context.Context) error { return t.tx.Rollback() }
 

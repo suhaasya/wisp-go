@@ -12,10 +12,12 @@ var errChangeNotEditable = errors.New("session: table has no primary key")
 type resultChanges struct {
 	cs       *ChangeSet
 	keyCols  []string
+	schema   string
+	table    string
 	editable bool
 }
 
-func (s *Session) registerResultChanges(rid string, keyCols []string) {
+func (s *Session) registerResultChanges(rid string, keyCols []string, schema, table string) {
 	s.changeMu.Lock()
 	defer s.changeMu.Unlock()
 	if s.resultChanges == nil {
@@ -24,6 +26,8 @@ func (s *Session) registerResultChanges(rid string, keyCols []string) {
 	s.resultChanges[rid] = &resultChanges{
 		cs:       NewChangeSet(keyCols),
 		keyCols:  append([]string(nil), keyCols...),
+		schema:   schema,
+		table:    table,
 		editable: len(keyCols) > 0,
 	}
 }

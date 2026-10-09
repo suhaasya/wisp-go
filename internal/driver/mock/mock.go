@@ -21,6 +21,10 @@ type Config struct {
 	Columns   []driver.ColumnMeta
 	ExecLog   *[]string
 	PingFail  func() bool
+	// TxFailOnExec fails the transaction on the Nth Exec (1-based).
+	TxFailOnExec int
+	// TxRowsAffected sets RowsAffected per Exec index (1-based) when non-zero.
+	TxRowsAffected map[int]int64
 }
 
 // Open returns a connection that serves Config rows.
@@ -83,7 +87,53 @@ func (c *conn) Begin(ctx context.Context) (driver.Tx, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	return nil, errors.New("mock: Begin not implemented")
+	return &mockTx{cfg: c.cfg, rolledBack: false}, nil
+}
+
+type mockTx struct {
+	cfg        Config
+	execN      int
+	rolledBack bool
+	committed  bool
+}
+
+func (t *mockTx) Exec(ctx context.Context, sql string, args ...any) (driver.ExecResult, error) {
+	if err := ctx.Err(); err != nil {
+		return driver.ExecResult{}, err
+	}
+	t.execN++
+	if t.cfg.ExecLog != nil {
+		*t.cfg.ExecLog = append(*t.cfg.ExecLog, sql)
+	}
+	if t.cfg.TxFailOnExec > 0 && t.execN >= t.cfg.TxFailOnExec {
+		return driver.ExecResult{}, errors.New("mock: tx exec failed")
+	}
+	ra := int64(1)
+	if t.cfg.TxRowsAffected != nil {
+		if n, ok := t.cfg.TxRowsAffected[t.execN]; ok {
+			ra = n
+		}
+	}
+	return driver.ExecResult{RowsAffected: ra}, nil
+}
+
+func (t *mockTx) Commit(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if t.rolledBack {
+		return errors.New("mock: tx already rolled back")
+	}
+	t.committed = true
+	return nil
+}
+
+func (t *mockTx) Rollback(ctx context.Context) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	t.rolledBack = true
+	return nil
 }
 
 func (c *conn) Dialect() driver.Dialect { return dialect{} }

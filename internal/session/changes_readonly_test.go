@@ -8,7 +8,7 @@ import (
 
 func TestApplyResultChangeReadOnly(t *testing.T) {
 	s := NewTestSession(store.Profile{ReadOnly: true, Engine: "postgres"})
-	s.registerResultChanges("rid-1", []string{"id"})
+	s.registerResultChanges("rid-1", []string{"id"}, "public", "orders")
 	v := "x"
 	_, err := s.ApplyResultChange("rid-1", Change{Op: "set", Row: []any{1}, Col: "name", Value: &v})
 	if !IsWriteBlockedReadOnly(err) {

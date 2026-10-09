@@ -1,10 +1,16 @@
 import { useEffect, useState } from "preact/hooks";
-import { readOnly, stagedChangeCount, type TableSortKey } from "../state";
+import { readOnly, shellConnection, stagedChangeCount, type TableSortKey } from "../state";
 import { pkRowValues } from "../grid/edit";
 import {
+  commitResultChanges,
   discardResultChanges,
+  fetchReviewSQL,
   postResultChange,
+  type ReviewSQLResponse,
 } from "../grid/results-client";
+import { ReviewSQLDialog } from "../dialogs/review-sql";
+import { TypedConfirmDialog } from "../dialogs/typed-confirm";
+import { pushToast } from "../ui/Toast";
 import { buildColumns } from "../grid/columns";
 import { DataToolbar } from "../workspace/toolbar";
 import { appliedBrowseQuery, browseQueryKey, updateTableTabBrowseQuery } from "../workspace/browse-query";
@@ -40,6 +46,10 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
     import("../workspace/fk-jump").ForeignKeyMeta[]
   >([]);
   const [stagedCount, setStagedCount] = useState(0);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [review, setReview] = useState<ReviewSQLResponse | null>(null);
+  const [typedOpen, setTypedOpen] = useState(false);
+  const [committing, setCommitting] = useState(false);
 
   useEffect(() => {
     stagedChangeCount.value = stagedCount;
@@ -51,6 +61,17 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
   useEffect(() => {
     setStagedCount(0);
   }, [open?.rid]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        void openReview();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [sessionId, open?.rid, stagedCount]);
 
   useEffect(() => {
     setSortDraft(applied.sort);
@@ -166,6 +187,47 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
     await runChange({ op: "delete", row: pkRowValues(ctx, row) });
   }
 
+  async function openReview() {
+    if (!open || stagedCount === 0) {
+      return;
+    }
+    try {
+      const data = await fetchReviewSQL(sessionId, open.rid);
+      setReview(data);
+      setReviewOpen(true);
+    } catch (e: unknown) {
+      pushToast(e instanceof Error ? e.message : "Could not load review SQL", "error");
+    }
+  }
+
+  async function runCommit(tableConfirm?: string) {
+    if (!open) {
+      return;
+    }
+    setCommitting(true);
+    try {
+      const res = await commitResultChanges(sessionId, open.rid, { tableConfirm });
+      setReviewOpen(false);
+      setTypedOpen(false);
+      setReview(null);
+      setStagedCount(0);
+      gridAccess?.invalidateWindows();
+      pushToast(`Committed ${res.committed} change${res.committed === 1 ? "" : "s"}`, "success");
+    } catch (e: unknown) {
+      pushToast(e instanceof Error ? e.message : "Commit failed", "error");
+    } finally {
+      setCommitting(false);
+    }
+  }
+
+  function onCommitClick() {
+    if (review?.needsDeleteConfirm) {
+      setTypedOpen(true);
+      return;
+    }
+    void runCommit();
+  }
+
   async function onDiscard() {
     if (!open) {
       return;
@@ -203,7 +265,7 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
         onDuplicateRow={() => void onDuplicateRow()}
         onDeleteRow={() => void onDeleteRow()}
         onDiscard={() => void onDiscard()}
-        onReviewSQL={() => {}}
+        onReviewSQL={() => void openReview()}
       />
       <FilterBar
         columns={open.columns}
@@ -269,6 +331,26 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
           }}
         />
       </div>
+      <ReviewSQLDialog
+        open={reviewOpen}
+        title={`Review ${review?.count ?? stagedCount} changes to ${tab.table}`}
+        subtitle={
+          shellConnection.value
+            ? `${shellConnection.value.name} · ${shellConnection.value.subtitle}`
+            : `${tab.schema}.${tab.table}`
+        }
+        sql={review?.sql ?? ""}
+        warning={review?.warning}
+        onClose={() => setReviewOpen(false)}
+        onCommit={onCommitClick}
+        committing={committing}
+      />
+      <TypedConfirmDialog
+        open={typedOpen}
+        tableName={review?.table ?? tab.table}
+        onCancel={() => setTypedOpen(false)}
+        onConfirm={() => void runCommit(review?.table ?? tab.table)}
+      />
     </div>
   );
 }

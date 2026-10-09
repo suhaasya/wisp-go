@@ -251,6 +251,26 @@ func BrowseSQLForGuard(d driver.Dialect, spec BrowseSpec) (string, error) {
 	return sqlText, err
 }
 
+// BuildPointLookup selects one column for a row matching key columns.
+func BuildPointLookup(d driver.Dialect, schema, table, selectCol string, keyCols []string, keyVals []any) (string, []any, error) {
+	if schema == "" || table == "" || selectCol == "" {
+		return "", nil, errors.New("sqlgen: schema, table and column required")
+	}
+	if len(keyCols) != len(keyVals) || len(keyCols) == 0 {
+		return "", nil, errors.New("sqlgen: key columns and values required")
+	}
+	tbl := d.QuoteIdent(schema) + "." + d.QuoteIdent(table)
+	col := d.QuoteIdent(selectCol)
+	var args []any
+	var parts []string
+	for i, k := range keyCols {
+		args = append(args, keyVals[i])
+		parts = append(parts, d.QuoteIdent(k)+" = "+d.Placeholder(len(args)))
+	}
+	sqlText := "SELECT " + col + " FROM " + tbl + " WHERE " + strings.Join(parts, " AND ")
+	return sqlText, args, nil
+}
+
 // BuildTableCount returns COUNT(*) with the same WHERE as BuildBrowse.
 func BuildTableCount(d driver.Dialect, spec BrowseSpec) (string, []any, error) {
 	if spec.Schema == "" || spec.Table == "" {

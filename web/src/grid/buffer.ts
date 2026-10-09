@@ -67,6 +67,7 @@ export type WindowBuffer = {
   ensureViewport: (firstRow: number, lastRow: number) => Promise<void>;
   getWindow: (offset: number) => WindowPayload | undefined;
   cellValue: (row: number, col: number) => unknown | undefined;
+  isTruncated: (row: number, col: number) => boolean;
   isRowLoaded: (row: number) => boolean;
   cachedOffsets: () => number[];
   lastFetchTime: () => Date | null;
@@ -169,6 +170,15 @@ export function createWindowBuffer(opts: WindowBufferOptions): WindowBuffer {
     return idx >= 0 && col0 !== undefined && idx < col0.length;
   }
 
+  function isTruncated(row: number, col: number): boolean {
+    const w = windowForRow(row);
+    if (!w) {
+      return false;
+    }
+    const idx = row - w.offset;
+    return w.truncated?.[col]?.includes(idx) ?? false;
+  }
+
   function cellValue(row: number, col: number): unknown | undefined {
     const w = windowForRow(row);
     if (!w) {
@@ -189,6 +199,7 @@ export function createWindowBuffer(opts: WindowBufferOptions): WindowBuffer {
     ensureViewport,
     getWindow,
     cellValue,
+    isTruncated,
     isRowLoaded,
     cachedOffsets: () => [...cache.keys()],
     lastFetchTime: () => lastFetch,

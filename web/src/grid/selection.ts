@@ -72,6 +72,17 @@ export function rowIsSelected(state: SelectionState, row: number): boolean {
   return false;
 }
 
+/** Primary row for row detail: explicit row selection or cell selection anchor row. */
+export function primaryRow(state: SelectionState): number | null {
+  if (state.kind === "row" && state.rows.size > 0) {
+    return Math.min(...state.rows);
+  }
+  if (state.kind === "cell") {
+    return state.anchor.row;
+  }
+  return null;
+}
+
 export function cellInSelection(state: SelectionState, row: number, col: number): boolean {
   const r = selectionRange(state);
   if (!r) {

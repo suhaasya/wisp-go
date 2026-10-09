@@ -8,8 +8,10 @@ export interface InputProps {
   value?: string;
   placeholder?: string;
   disabled?: boolean;
+  readOnly?: boolean;
   ariaLabel?: string;
   onInput?: (value: string) => void;
+  onFocus?: () => void;
 }
 
 const fieldClass =
@@ -23,8 +25,10 @@ export function Input({
   value,
   placeholder,
   disabled,
+  readOnly,
   ariaLabel,
   onInput,
+  onFocus,
 }: InputProps) {
   const inputId = id ?? (label ? `input-${label.replace(/\s+/g, "-").toLowerCase()}` : undefined);
   return (
@@ -43,6 +47,8 @@ export function Input({
           value={value}
           placeholder={placeholder}
           disabled={disabled}
+          readOnly={readOnly}
+          onFocus={onFocus}
           onInput={(e) => onInput?.((e.target as HTMLInputElement).value)}
         />
       ) : (
@@ -53,6 +59,8 @@ export function Input({
           value={value}
           placeholder={placeholder}
           disabled={disabled}
+          readOnly={readOnly}
+          onFocus={onFocus}
           onInput={(e) => onInput?.((e.target as HTMLInputElement).value)}
         />
       )}

@@ -31,6 +31,30 @@ export async function fetchSchemas(
   );
 }
 
+export type TableDetailsResponse = {
+  schema: string;
+  table: string;
+  columns: { name: string; type: string }[];
+  primary_key?: string[];
+  foreign_keys?: {
+    name: string;
+    columns: string[];
+    ref_schema: string;
+    ref_table: string;
+    ref_columns: string[];
+  }[];
+};
+
+export async function fetchTableDetails(
+  sessionId: string,
+  schema: string,
+  table: string,
+  opts?: { signal?: AbortSignal },
+): Promise<TableDetailsResponse> {
+  const path = `/api/v1/sessions/${encodeURIComponent(sessionId)}/tables/${encodeURIComponent(schema)}/${encodeURIComponent(table)}`;
+  return request<TableDetailsResponse>("GET", path, undefined, { signal: opts?.signal });
+}
+
 export async function fetchObjects(
   sessionId: string,
   schema: string,

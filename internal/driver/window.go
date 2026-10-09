@@ -180,6 +180,46 @@ func (w *Window) CellBool(col, row int) (bool, bool) {
 	return cd.bools[row], true
 }
 
+// IsTruncated reports whether a text cell was cut to maxCellBytes in the window.
+func (w *Window) IsTruncated(col, row int) bool {
+	if col < 0 || col >= len(w.cols) || row < 0 || row >= w.Rows {
+		return false
+	}
+	cd := &w.cols[col]
+	for _, r := range cd.truncated {
+		if r == row {
+			return true
+		}
+	}
+	return false
+}
+
+// CellString formats any column at row as a string for display and detail panel.
+func (w *Window) CellString(col, row int) (string, bool) {
+	if col < 0 || col >= len(w.cols) || row < 0 || row >= w.Rows {
+		return "", false
+	}
+	cd := &w.cols[col]
+	if isNullRow(cd.nulls, row) {
+		return "", false
+	}
+	switch cd.kind {
+	case colInt:
+		return strconv.FormatInt(cd.ints[row], 10), true
+	case colFloat:
+		return strconv.FormatFloat(cd.floats[row], 'g', -1, 64), true
+	case colBool:
+		if cd.bools[row] {
+			return "true", true
+		}
+		return "false", true
+	case colText:
+		return w.CellText(col, row)
+	default:
+		return "", false
+	}
+}
+
 // CellText reads a text arena column at row.
 func (w *Window) CellText(col, row int) (string, bool) {
 	if col < 0 || col >= len(w.cols) || row < 0 || row >= w.Rows {

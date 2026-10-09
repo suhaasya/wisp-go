@@ -79,6 +79,8 @@ func (h *SessionsHandler) serveResults(w http.ResponseWriter, r *http.Request, s
 		h.postResultCount(w, r, sid, rid)
 	case strings.HasPrefix(rest, "results/") && strings.Contains(rest, "/window") && r.Method == http.MethodGet:
 		h.getResultWindow(w, r, sid, rest)
+	case strings.HasPrefix(rest, "results/") && strings.Contains(rest, "/value") && r.Method == http.MethodGet:
+		h.getResultValue(w, r, sid, rest)
 	case strings.HasPrefix(rest, "results/") && r.Method == http.MethodDelete:
 		rid := strings.TrimPrefix(rest, "results/")
 		rid = strings.TrimSuffix(rid, "/")
@@ -136,6 +138,33 @@ func (h *SessionsHandler) getResultWindow(w http.ResponseWriter, r *http.Request
 	}
 	s.TouchTabRef(time.Now())
 	writeRawJSON(w, raw)
+}
+
+func (h *SessionsHandler) getResultValue(w http.ResponseWriter, r *http.Request, sid, rest string) {
+	s, ok := h.mgr.Get(sid)
+	if !ok {
+		writeError(w, http.StatusNotFound, "session_not_found", "Session not found.", "")
+		return
+	}
+	path := strings.TrimPrefix(rest, "results/")
+	path = strings.TrimSuffix(path, "/value")
+	path = strings.Trim(path, "/")
+	rid := path
+	row, _ := strconv.Atoi(r.URL.Query().Get("row"))
+	col := r.URL.Query().Get("col")
+	if col == "" {
+		writeError(w, http.StatusBadRequest, "invalid_query", "col required", "")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
+	defer cancel()
+	out, err := s.ResultCellValue(ctx, rid, row, col)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "value_failed", "Could not load value.", err.Error())
+		return
+	}
+	s.TouchTabRef(time.Now())
+	writeJSON(w, out)
 }
 
 func (h *SessionsHandler) postResultCount(w http.ResponseWriter, r *http.Request, sid, rid string) {

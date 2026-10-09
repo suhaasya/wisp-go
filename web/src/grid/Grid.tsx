@@ -14,6 +14,11 @@ import {
   toggleRowSelection,
   type SelectionState,
 } from "./selection";
+
+export type GridCellAccess = {
+  getCell: (row: number, col: number) => unknown;
+  isTruncated: (row: number, col: number) => boolean;
+};
 import type { TableSortKey } from "../state";
 import { toggleSortDraft } from "../workspace/sort-draft";
 import { DEFAULT_WINDOW_ROWS, type ColumnMeta, type RowTotal, type WindowPayload } from "./window";
@@ -29,6 +34,9 @@ export type GridProps = {
   onSortDraftChange?: (sort: TableSortKey[]) => void;
   initialScrollTop?: number;
   onScrollTopChange?: (top: number) => void;
+  onSelectionChange?: (state: SelectionState) => void;
+  onGridReady?: (access: GridCellAccess) => void;
+  onToggleDetail?: () => void;
   fetchWindow?: (offset: number, signal: AbortSignal) => Promise<WindowPayload>;
 };
 
@@ -135,12 +143,19 @@ export function Grid(props: GridProps) {
         selection.value = extend
           ? extendCellSelection(selection.value, row, col)
           : selectCell(row, col);
+        props.onSelectionChange?.(selection.value);
         pool?.scheduleLayout();
       },
       onRowClick(row, extend) {
         selection.value = toggleRowSelection(selection.value, row, extend);
+        props.onSelectionChange?.(selection.value);
         pool?.scheduleLayout();
       },
+    });
+
+    props.onGridReady?.({
+      getCell: (row, col) => buffer.cellValue(row, col),
+      isTruncated: (row, col) => buffer.isTruncated(row, col),
     });
 
     const onScroll = () => {
@@ -167,6 +182,11 @@ export function Grid(props: GridProps) {
     onScroll();
 
     const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === " " && e.target === hostRef.current) {
+        e.preventDefault();
+        props.onToggleDetail?.();
+        return;
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === "c") {
         const getCell = (row: number, colIndex: number) => {
           const v = buffer.cellValue(row, colIndex);
@@ -189,7 +209,17 @@ export function Grid(props: GridProps) {
       headerApiRef.current = null;
       buffer.destroy();
     };
-  }, [props.sessionId, props.rid, props.schema, props.table, props.fetchWindow, props.onSortDraftChange]);
+  }, [
+    props.sessionId,
+    props.rid,
+    props.schema,
+    props.table,
+    props.fetchWindow,
+    props.onSortDraftChange,
+    props.onSelectionChange,
+    props.onGridReady,
+    props.onToggleDetail,
+  ]);
 
   const totalLabel =
     props.total.kind === "estimate"

@@ -81,6 +81,15 @@ func (s *Session) ExactResultCount(ctx context.Context, rid string) (pager.Total
 	return p.ExactCount(ctx, rid)
 }
 
+// ResultCellValue returns a full or preview cell value for the detail panel.
+func (s *Session) ResultCellValue(ctx context.Context, rid string, row int, col string) (pager.CellValueResult, error) {
+	p := s.ensurePager()
+	if p == nil {
+		return pager.CellValueResult{}, errSessionNotReady
+	}
+	return p.CellValue(ctx, rid, row, col)
+}
+
 // CloseResult closes one result.
 func (s *Session) CloseResult(rid string) {
 	if p := s.ensurePager(); p != nil {

@@ -4,6 +4,7 @@ import {
   type TableBrowseQuery,
   type WorkspaceTab,
 } from "../state";
+import { browseQueryKey } from "./browse-query";
 import type { OpenTableRequest } from "./sidebar/tree";
 
 export function tabTitle(tab: WorkspaceTab): string {
@@ -28,6 +29,25 @@ export function newQueryTab(): WorkspaceTab {
     queryText: "",
     pinned: false,
   };
+}
+
+export function openFilteredTableTab(
+  schema: string,
+  table: string,
+  browseQuery: TableBrowseQuery,
+): void {
+  const id = `${schema}/${table}/data/filtered/${browseQueryKey(browseQuery)}`;
+  const tab: WorkspaceTab = {
+    id,
+    kind: "table_data",
+    schema,
+    table,
+    pinned: false,
+    browseQuery,
+    pendingResultLoad: false,
+  };
+  workspaceTabs.value = [...workspaceTabs.value.filter((t) => t.id !== id), tab];
+  activateWorkspaceTab(id);
 }
 
 export function openWorkspaceTableTab(req: OpenTableRequest): void {

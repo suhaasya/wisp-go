@@ -61,6 +61,29 @@ export async function fetchResultWindow(
   );
 }
 
+export type CellValueResponse = {
+  value: string;
+  truncated?: boolean;
+  full?: boolean;
+  json?: boolean;
+};
+
+export async function fetchCellValue(
+  sessionId: string,
+  rid: string,
+  row: number,
+  col: string,
+  signal?: AbortSignal,
+): Promise<CellValueResponse> {
+  const q = new URLSearchParams({ row: String(row), col });
+  return request<CellValueResponse>(
+    "GET",
+    `/api/v1/sessions/${encodeURIComponent(sessionId)}/results/${encodeURIComponent(rid)}/value?${q}`,
+    undefined,
+    { signal },
+  );
+}
+
 export async function closeResult(sessionId: string, rid: string): Promise<void> {
   await request(
     "DELETE",

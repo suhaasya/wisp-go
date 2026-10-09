@@ -1,11 +1,11 @@
 module github.com/suhaasya/wisp-go
 
-go 1.26.0
+go 1.26.9
 
 require (
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/go-sql-driver/mysql v1.9.2
-	github.com/jackc/pgx/v5 v5.7.4
+	github.com/jackc/pgx/v5 v5.9.2
 	github.com/jedisct1/go-minisign v0.0.0-20260527172527-a09352b57a22
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/crypto v0.57.0

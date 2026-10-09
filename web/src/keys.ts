@@ -268,6 +268,26 @@ export function formatBindingDisplay(raw: string, opts?: { mac?: boolean }): str
   return parts.join("+");
 }
 
+/** Physical key for Alt chords (macOS Option often changes e.key, not e.code). */
+export function bindingKeyToKeyboardCode(key: string): string | null {
+  if (key === "enter") {
+    return "Enter";
+  }
+  if (key === "escape") {
+    return "Escape";
+  }
+  if (key === "/") {
+    return "Slash";
+  }
+  if (key.length === 1 && /[a-z]/i.test(key)) {
+    return `Key${key.toUpperCase()}`;
+  }
+  if (key.length === 1 && /[0-9]/.test(key)) {
+    return `Digit${key}`;
+  }
+  return null;
+}
+
 export function eventMatchesBinding(e: KeyboardEvent, binding: string): boolean {
   const p = parseBinding(binding);
   if (!p) {
@@ -293,7 +313,16 @@ export function eventMatchesBinding(e: KeyboardEvent, binding: string): boolean 
   if (p.key === "/") {
     return e.key === "/" || e.key === "?";
   }
-  return ek === p.key;
+  if (ek === p.key) {
+    return true;
+  }
+  if (p.alt && !p.mod) {
+    const code = bindingKeyToKeyboardCode(p.key);
+    if (code && e.code === code) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /** CodeMirror 6 key names for run/cancel extensions. */

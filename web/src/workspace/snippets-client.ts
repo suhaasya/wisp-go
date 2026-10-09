@@ -13,7 +13,8 @@ export type SnippetsDocument = {
 };
 
 export async function fetchSnippets(): Promise<SnippetsDocument> {
-  return request<SnippetsDocument>("GET", "/api/v1/snippets");
+  const doc = await request<SnippetsDocument>("GET", "/api/v1/snippets");
+  return { ...doc, snippets: doc.snippets ?? [] };
 }
 
 export async function saveSnippet(snippet: Omit<Snippet, "id"> & { id?: string }): Promise<Snippet> {

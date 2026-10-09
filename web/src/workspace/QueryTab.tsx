@@ -12,7 +12,7 @@ import { editorRunKeyBindings, formatBindingDisplay, resolveKeybindings } from "
 import { getSettings } from "../settings";
 import { readOnly, sessionEngine, workspaceProfileId } from "../state";
 import { HistoryDrawer } from "./history-drawer";
-import { fetchSnippets, saveSnippet } from "./snippets-client";
+import { fetchSnippets, saveSnippet, type SnippetsDocument } from "./snippets-client";
 import type { WorkspaceTab } from "../state";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
@@ -190,43 +190,45 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
       const engine = sessionEngine.value;
       const sqlEngine =
         engine === "mysql" || engine === "mariadb" ? engine : "postgres";
-      void fetchSnippets().then((doc) => {
-        if (cancelled || !hostRef.current) {
-          return;
-        }
-        const resolved = resolveKeybindings(getSettings().keybindings ?? {});
-        handleRef.current = mountSqlEditor({
-        parent: hostRef.current,
-        value: tab.queryText ?? "",
-        engine: sqlEngine,
-        schema,
-        snippets: doc.snippets.map((s) => ({ name: s.name, tags: s.tags })),
-        runKeys: {
-          onRunStatement,
-          onRunAll,
-          onCancel,
-        },
-        runKeyBindings: editorRunKeyBindings(resolved),
-        onChange: (value) => {
-          sqlTextRef.current = value;
-          updateQueryTabText(tab.id, value);
-          if (hydrateTimerRef.current !== null) {
-            window.clearTimeout(hydrateTimerRef.current);
+      void fetchSnippets()
+        .catch((): SnippetsDocument => ({ version: 1, snippets: [] }))
+        .then((doc) => {
+          if (cancelled || !hostRef.current) {
+            return;
           }
-          hydrateTimerRef.current = window.setTimeout(() => {
-            hydrateTimerRef.current = null;
-            const loaded = new Set(schemaDataRef.current.tables.map((t) => t.name));
-            const need = missingTableNames(loaded, referencedTableNames(value));
-            if (need.length > 0) {
-              loadSchema(need);
-            }
-          }, 400);
-        },
+          const resolved = resolveKeybindings(getSettings().keybindings ?? {});
+          handleRef.current = mountSqlEditor({
+            parent: hostRef.current,
+            value: tab.queryText ?? "",
+            engine: sqlEngine,
+            schema,
+            snippets: (doc.snippets ?? []).map((s) => ({ name: s.name, tags: s.tags })),
+            runKeys: {
+              onRunStatement,
+              onRunAll,
+              onCancel,
+            },
+            runKeyBindings: editorRunKeyBindings(resolved),
+            onChange: (value) => {
+              sqlTextRef.current = value;
+              updateQueryTabText(tab.id, value);
+              if (hydrateTimerRef.current !== null) {
+                window.clearTimeout(hydrateTimerRef.current);
+              }
+              hydrateTimerRef.current = window.setTimeout(() => {
+                hydrateTimerRef.current = null;
+                const loaded = new Set(schemaDataRef.current.tables.map((t) => t.name));
+                const need = missingTableNames(loaded, referencedTableNames(value));
+                if (need.length > 0) {
+                  loadSchema(need);
+                }
+              }, 400);
+            },
+          });
+          sqlTextRef.current = tab.queryText ?? "";
+          hostRef.current!.dataset.editorMounted = "true";
+          loadSchema();
         });
-        sqlTextRef.current = tab.queryText ?? "";
-        hostRef.current!.dataset.editorMounted = "true";
-        loadSchema();
-      });
     });
 
     const offSchema = onSchemaInvalidated((sid) => {
@@ -342,7 +344,7 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
         class="editor flex h-[250px] shrink-0 border-b border-line bg-panel font-mono text-13 leading-[21px]"
         data-testid="sql-editor"
       >
-        <div ref={hostRef} class="min-h-0 min-w-0 flex-1" data-testid="sql-editor-host" />
+        <div ref={hostRef} class="h-full min-h-0 min-w-0 flex-1" data-testid="sql-editor-host" />
       </div>
       <ResultTabs
         tabs={panelTabs}

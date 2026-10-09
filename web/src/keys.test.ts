@@ -95,4 +95,16 @@ describe("eventMatchesBinding", () => {
     const e = { metaKey: false, ctrlKey: false, altKey: true, shiftKey: false, key: "t" } as KeyboardEvent;
     expect(eventMatchesBinding(e, "Alt-T")).toBe(true);
   });
+
+  it("matches Alt-T on macOS when Option produces a special character", () => {
+    const e = {
+      metaKey: false,
+      ctrlKey: false,
+      altKey: true,
+      shiftKey: false,
+      key: "†",
+      code: "KeyT",
+    } as KeyboardEvent;
+    expect(eventMatchesBinding(e, "Alt-T")).toBe(true);
+  });
 });

@@ -30,7 +30,7 @@ func TestPostRunReturnsQID(t *testing.T) {
 	s.AdoptMainConn(conn)
 	mgr.AdoptSession(s)
 
-	h := api.NewSessionsHandler(mgr)
+	h := api.NewSessionsHandler(mgr, nil)
 	body, _ := json.Marshal(map[string]any{
 		"sql":  "SELECT 1",
 		"mode": "all",

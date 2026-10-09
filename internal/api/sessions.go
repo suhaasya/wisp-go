@@ -17,11 +17,12 @@ const sessionsPrefix = "/api/v1/sessions"
 // SessionsHandler serves database session lifecycle APIs.
 type SessionsHandler struct {
 	mgr *session.Manager
+	fs  *FSHandler
 }
 
 // NewSessionsHandler returns the sessions handler.
-func NewSessionsHandler(mgr *session.Manager) *SessionsHandler {
-	return &SessionsHandler{mgr: mgr}
+func NewSessionsHandler(mgr *session.Manager, fs *FSHandler) *SessionsHandler {
+	return &SessionsHandler{mgr: mgr, fs: fs}
 }
 
 type createSessionRequest struct {
@@ -73,6 +74,11 @@ func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					h.postExplain(w, r, sid)
 					return
 				}
+			case "export":
+				if r.Method == http.MethodGet {
+					h.getExport(w, r, sid)
+					return
+				}
 			case "schemas", "objects", "complete":
 				h.serveSchema(w, r, sid, rest)
 				return
@@ -93,6 +99,13 @@ func (h *SessionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 					qid := strings.TrimPrefix(rest, "cancel/")
 					qid = strings.TrimSuffix(qid, "/")
 					h.postCancelRun(w, r, sid, qid)
+					return
+				}
+				if strings.HasPrefix(rest, "export/") && strings.HasSuffix(rest, "/cancel") && r.Method == http.MethodPost {
+					eid := strings.TrimPrefix(rest, "export/")
+					eid = strings.TrimSuffix(eid, "/cancel")
+					eid = strings.TrimSuffix(eid, "/")
+					h.postExportCancel(w, r, sid, eid)
 					return
 				}
 			}

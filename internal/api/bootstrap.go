@@ -57,6 +57,7 @@ func NewAppHandlers(settingsPath string, paths store.Paths, probe store.KeyringP
 	snippetsStore := store.NewSnippetsStore(paths)
 	sessionMgr.SetJournal(journalStore, workspaceStore)
 	sessionMgr.SetHistory(historyStore)
+	fsHandler := NewFSHandler(home)
 	return &AppHandlers{
 		Settings:        NewSettingsHandler(settingsStore, hub),
 		Secrets:         NewSecretsHandler(secretsStore),
@@ -64,8 +65,8 @@ func NewAppHandlers(settingsPath string, paths store.Paths, probe store.KeyringP
 		ConnectionTest:  NewConnectionTestHandler(secretsStore),
 		ConnectionParse: NewConnectionParseHandler(),
 		HostKeyAccept:   NewHostKeyAcceptHandler(),
-		FS:              NewFSHandler(home),
-		Sessions:        NewSessionsHandler(sessionMgr),
+		FS:              fsHandler,
+		Sessions:        NewSessionsHandler(sessionMgr, fsHandler),
 		Workspace: NewWorkspaceHandler(workspaceStore, func(profileID string) {
 			sessionMgr.ScheduleJournal(profileID)
 		}),

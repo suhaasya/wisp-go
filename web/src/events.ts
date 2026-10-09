@@ -1,4 +1,5 @@
 import { applySettings, type WispSettings } from "./settings";
+import { emitExportEvent } from "./editor/export-events";
 import { emitQueryEvent } from "./editor/query-events";
 import { emitSchemaInvalidated } from "./editor/schema-events";
 import { handleSessionSSE } from "./session-workspace";
@@ -65,6 +66,11 @@ function handleMessage(raw: string): void {
     case "query":
       if (parsed.data && typeof parsed.data === "object") {
         emitQueryEvent(parsed.data as import("./editor/query-events").QuerySSEPayload);
+      }
+      break;
+    case "export":
+      if (parsed.data && typeof parsed.data === "object") {
+        emitExportEvent(parsed.data as import("./editor/export-events").ExportSSEPayload);
       }
       break;
     default:

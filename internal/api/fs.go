@@ -63,6 +63,11 @@ func (h *FSHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, out)
 }
 
+// ResolveHomePath maps ~ paths to an absolute path under the user home directory.
+func (h *FSHandler) ResolveHomePath(raw string) (string, error) {
+	return h.resolveHomePath(raw)
+}
+
 func (h *FSHandler) resolveHomePath(raw string) (string, error) {
 	p := raw
 	if strings.HasPrefix(p, "~/") {

@@ -50,6 +50,11 @@ type Session struct {
 	runs           map[string]*runJob
 	queryRunRIDs   []string
 
+	exportMu sync.Mutex
+	exports  map[string]*exportJob
+
+	onExportBroadcast func(sid string, ev ExportEvent)
+
 	serverInfo driver.ServerInfo
 	dbPassword []byte
 	sshSec     SSHConnectSecrets

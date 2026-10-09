@@ -137,6 +137,18 @@ func (m *Manager) AdoptSession(s *Session) {
 			m.broadcast.Broadcast("query", queryEventPayload(sid, ev))
 		}
 	}
+	if s.onExportBroadcast == nil && m.broadcast != nil {
+		s.onExportBroadcast = func(sid string, ev ExportEvent) {
+			m.broadcast.Broadcast("export", map[string]any{
+				"sid":       sid,
+				"eid":       ev.EID,
+				"rows":      ev.Rows,
+				"done":      ev.Done,
+				"cancelled": ev.Cancelled,
+				"error":     ev.Error,
+			})
+		}
+	}
 	m.mu.Lock()
 	m.sessions[s.ID()] = s
 	m.mu.Unlock()
@@ -207,6 +219,18 @@ func (m *Manager) Create(ctx context.Context, profileID string) (*Session, drive
 		onQueryBroadcast: func(sid string, ev QueryRunEvent) {
 			if m.broadcast != nil {
 				m.broadcast.Broadcast("query", queryEventPayload(sid, ev))
+			}
+		},
+		onExportBroadcast: func(sid string, ev ExportEvent) {
+			if m.broadcast != nil {
+				m.broadcast.Broadcast("export", map[string]any{
+					"sid":       sid,
+					"eid":       ev.EID,
+					"rows":      ev.Rows,
+					"done":      ev.Done,
+					"cancelled": ev.Cancelled,
+					"error":     ev.Error,
+				})
 			}
 		},
 		onJournalBump: func(pid string) { m.scheduleJournal(pid) },

@@ -14,7 +14,7 @@ import (
 func TestSessionsCreateRequiresProfile(t *testing.T) {
 	st := store.NewProfileStore(t.TempDir() + "/connections.json")
 	mgr := session.NewManager(st, nil, nil)
-	h := api.NewSessionsHandler(mgr)
+	h := api.NewSessionsHandler(mgr, nil)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/v1/sessions", bytes.NewReader([]byte(`{}`)))
 	h.ServeHTTP(rec, req)

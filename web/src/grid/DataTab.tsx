@@ -28,6 +28,18 @@ import type { WorkspaceTab } from "../state";
 import { Grid, type GridCellAccess } from "./Grid";
 import { closeResult, openTableResult, type OpenResultResponse } from "./results-client";
 import { emptySelection, primaryRow, type SelectionState } from "./selection";
+import { ExportDialog } from "../dialogs/export";
+import { onExportEvent } from "../editor/export-events";
+import {
+  cancelFileExport,
+  exportDownloadURL,
+  fetchExportText,
+  startFileExport,
+  type ExportQuery,
+} from "../workspace/export-client";
+import { DEFAULT_WINDOW_ROWS } from "./window";
+
+const EXPORT_PAGE_ROW_HEIGHT = 26;
 
 type TableDataTab = Extract<WorkspaceTab, { kind: "table_data" }>;
 
@@ -51,6 +63,8 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
   const [review, setReview] = useState<ReviewSQLResponse | null>(null);
   const [typedOpen, setTypedOpen] = useState(false);
   const [committing, setCommitting] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [fileExportId, setFileExportId] = useState<string | null>(null);
 
   useEffect(() => {
     stagedChangeCount.value = stagedCount;
@@ -62,6 +76,36 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
   useEffect(() => {
     setStagedCount(0);
   }, [open?.rid]);
+
+  useEffect(() => {
+    if (!fileExportId) {
+      return;
+    }
+    return onExportEvent((ev) => {
+      if (ev.eid !== fileExportId) {
+        return;
+      }
+      if (ev.error) {
+        pushToast(ev.error, "error");
+        setFileExportId(null);
+        return;
+      }
+      if (ev.cancelled) {
+        pushToast("Export cancelled", "default");
+        setFileExportId(null);
+        return;
+      }
+      if (ev.done) {
+        pushToast(`Export finished (${ev.rows ?? 0} rows)`, "success");
+        setFileExportId(null);
+        setExportOpen(false);
+        return;
+      }
+      if (typeof ev.rows === "number") {
+        pushToast(`Exporting… ${ev.rows.toLocaleString()} rows`, "default");
+      }
+    });
+  }, [fileExportId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -229,6 +273,32 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
     void runCommit();
   }
 
+  function onExportDownload(query: ExportQuery) {
+    window.location.assign(exportDownloadURL(sessionId, query));
+    setExportOpen(false);
+  }
+
+  async function onExportClipboard(query: ExportQuery) {
+    try {
+      const text = await fetchExportText(sessionId, query);
+      await navigator.clipboard.writeText(text);
+      pushToast("Copied export to clipboard", "success");
+      setExportOpen(false);
+    } catch (e: unknown) {
+      pushToast(e instanceof Error ? e.message : "Clipboard export failed", "error");
+    }
+  }
+
+  async function onExportFile(query: ExportQuery & { path: string }) {
+    try {
+      const { export_id } = await startFileExport(sessionId, query);
+      setFileExportId(export_id);
+      pushToast("Writing export to disk…", "default");
+    } catch (e: unknown) {
+      pushToast(e instanceof Error ? e.message : "Could not start export", "error");
+    }
+  }
+
   async function onDiscard() {
     if (!open) {
       return;
@@ -268,6 +338,7 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
         onDeleteRow={() => void onDeleteRow()}
         onDiscard={() => void onDiscard()}
         onReviewSQL={() => void openReview()}
+        onExport={() => setExportOpen(true)}
       />
       <FilterBar
         columns={open.columns}
@@ -352,6 +423,24 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
         tableName={review?.table ?? tab.table}
         onCancel={() => setTypedOpen(false)}
         onConfirm={() => void runCommit(review?.table ?? tab.table)}
+      />
+      <ExportDialog
+        open={exportOpen}
+        sessionId={sessionId}
+        rid={open.rid}
+        tableLabel={`${tab.schema}.${tab.table}`}
+        selection={selection}
+        pageOffset={Math.floor((tab.scrollTop ?? 0) / EXPORT_PAGE_ROW_HEIGHT)}
+        pageLimit={DEFAULT_WINDOW_ROWS}
+        onClose={() => {
+          setExportOpen(false);
+          if (fileExportId) {
+            void cancelFileExport(sessionId, fileExportId);
+          }
+        }}
+        onDownload={onExportDownload}
+        onClipboard={(q) => void onExportClipboard(q)}
+        onFileExport={(q) => void onExportFile(q)}
       />
     </div>
   );

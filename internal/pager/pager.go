@@ -173,6 +173,20 @@ func (m *Manager) encodeWindow(rid string, offset int, total Total, raw *driver.
 	return buildWindowJSON(rid, offset, total, w, ov)
 }
 
+// ResultMeta returns the source and columns for an open result.
+func (m *Manager) ResultMeta(rid string) (Source, []driver.ColumnMeta, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	r, ok := m.results[rid]
+	if !ok {
+		return Source{}, nil, errNotFound
+	}
+	src := r.source
+	cols := make([]driver.ColumnMeta, len(r.columns))
+	copy(cols, r.columns)
+	return src, cols, nil
+}
+
 // Close removes one result.
 func (m *Manager) Close(rid string) {
 	m.mu.Lock()

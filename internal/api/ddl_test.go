@@ -23,7 +23,7 @@ func TestPostDDLPreviewDropWithoutCascade(t *testing.T) {
 	s.AdoptMainConn(conn)
 	mgr := session.NewManager(store.NewProfileStore(t.TempDir()+"/c.json"), nil, nil)
 	mgr.AdoptSession(s)
-	h := api.NewSessionsHandler(mgr)
+	h := api.NewSessionsHandler(mgr, nil)
 
 	body, _ := json.Marshal(map[string]any{
 		"action": "drop_table",

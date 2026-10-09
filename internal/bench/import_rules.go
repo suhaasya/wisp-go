@@ -25,10 +25,11 @@ var allowedInternalDeps = map[string][]string{
 	modulePath + "/internal/driver/postgres": {modulePath + "/internal/driver"},
 	modulePath + "/internal/driver/mysql":    {modulePath + "/internal/driver"},
 	modulePath + "/internal/driver/mock":     {modulePath + "/internal/driver"},
-	modulePath + "/internal/pager":           {modulePath + "/internal/driver"},
+	modulePath + "/internal/pager":           {modulePath + "/internal/driver", modulePath + "/internal/sqlgen"},
 	modulePath + "/internal/sqlgen":          {modulePath + "/internal/driver"},
 	modulePath + "/internal/store":           {},
 	modulePath + "/internal/session": {
+		modulePath + "/internal/mover",
 		modulePath + "/internal/pager",
 		modulePath + "/internal/sqlgen",
 		modulePath + "/internal/store",
@@ -39,7 +40,7 @@ var allowedInternalDeps = map[string][]string{
 	},
 	modulePath + "/internal/api":    {modulePath + "/internal/session", modulePath + "/internal/store"},
 	modulePath + "/internal/server": {modulePath + "/internal/api"},
-	modulePath + "/internal/mover":  {},
+	modulePath + "/internal/mover":  {modulePath + "/internal/driver"},
 	modulePath + "/internal/bench":  {},
 }
 

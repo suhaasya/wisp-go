@@ -26,7 +26,7 @@ func TestGetTableDDLFromCachedMetadata(t *testing.T) {
 
 	mgr := session.NewManager(store.NewProfileStore(t.TempDir()+"/c.json"), nil, nil)
 	mgr.AdoptSession(s)
-	h := api.NewSessionsHandler(mgr)
+	h := api.NewSessionsHandler(mgr, nil)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequestWithContext(

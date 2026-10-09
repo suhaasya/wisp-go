@@ -80,8 +80,40 @@ async function run() {
   metrics.dom_nodes = { value: byName.Nodes ?? 0 };
   metrics.tab_total_mb = { value: (byName.JSHeapUsedSize ?? 0) / (1024 * 1024) };
 
-  skip("js_heap_1m_mb", "open_table_scroll_1m not implemented (M1)");
-  skip("long_task_ms", "grid scroll long-task observer not implemented (M1)");
+  await page.goto(`${base}/#/bench/grid`, { waitUntil: "networkidle" });
+  await page.waitForSelector('[data-testid="wisp-grid-scroll"]');
+
+  const longTasks = [];
+  await page.evaluate(() => {
+    window.__wispLongTasks = [];
+    new PerformanceObserver((list) => {
+      for (const e of list.getEntries()) {
+        window.__wispLongTasks.push(e.duration);
+      }
+    }).observe({ type: "longtask", buffered: true });
+  });
+
+  const grid = page.locator('[data-testid="wisp-grid-scroll"]');
+  const maxScroll = await grid.evaluate((el) => el.scrollHeight - el.clientHeight);
+  const steps = 40;
+  for (let i = 0; i <= steps; i++) {
+    await grid.evaluate((el, top) => {
+      el.scrollTop = top;
+    }, (maxScroll * i) / steps);
+    await page.waitForTimeout(16);
+  }
+
+  const after = await cdp.send("Performance.getMetrics");
+  const afterByName = Object.fromEntries(after.metrics.map((m) => [m.name, m.value]));
+  const jsAfter = afterByName.JSHeapUsedSize ?? jsBytes;
+  metrics.js_heap_1m_mb = { value: jsAfter / (1024 * 1024) };
+  metrics.dom_nodes = { value: afterByName.Nodes ?? metrics.dom_nodes.value };
+
+  const longest = await page.evaluate(() => {
+    const tasks = window.__wispLongTasks ?? [];
+    return tasks.length ? Math.max(...tasks) : 0;
+  });
+  metrics.long_task_ms = { value: longest };
 
   await browser.close();
   await writeResults();

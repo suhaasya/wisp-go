@@ -14,6 +14,7 @@ describe("router", () => {
       id: "pg-local",
     } satisfies Route);
     expect(parseRoute("#/w/s1")).toEqual({ name: "workspace", sessionId: "s1" } satisfies Route);
+    expect(parseRoute("#/bench/grid")).toEqual({ name: "bench-grid" } satisfies Route);
   });
 
   it("syncRouteFromHash updates route signal", async () => {

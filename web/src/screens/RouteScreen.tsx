@@ -40,6 +40,29 @@ function LazyWorkspace({ sessionId }: { sessionId: string }) {
   return <Screen sessionId={sessionId} />;
 }
 
+function LazyGridBench() {
+  const [Screen, setScreen] = useState<ComponentType | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    import("../grid/GridBench").then((mod) => {
+      if (!cancelled) {
+        setScreen(() => mod.GridBench);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (!Screen) {
+    return <div class="flex flex-1 bg-canvas" aria-busy="true" />;
+  }
+  return (
+    <div class="flex min-h-0 flex-1 flex-col p-2">
+      <Screen />
+    </div>
+  );
+}
+
 function LazyConnectionsScreen() {
   const [Screen, setScreen] = useState<ComponentType | null>(null);
   useEffect(() => {
@@ -69,6 +92,8 @@ export function RouteScreen({ route: r }: { route: Route }) {
       return <LazyConnectionForm profileId={r.id} />;
     case "workspace":
       return <LazyWorkspace sessionId={r.sessionId} />;
+    case "bench-grid":
+      return <LazyGridBench />;
     default:
       return null;
   }

@@ -5,7 +5,8 @@ export type Route =
   | { name: "connection-new" }
   | { name: "connection-edit"; id: string }
   | { name: "workspace"; sessionId: string }
-  | { name: "gallery" };
+  | { name: "gallery" }
+  | { name: "bench-grid" };
 
 export const route = signal<Route>({ name: "connections" });
 
@@ -13,6 +14,9 @@ export function parseRoute(hash: string): Route {
   const path = hash.replace(/^#/, "") || "/connections";
   if (path === "/gallery" || path.startsWith("/gallery?")) {
     return { name: "gallery" };
+  }
+  if (path === "/bench/grid") {
+    return { name: "bench-grid" };
   }
   if (path === "/connections") {
     return { name: "connections" };

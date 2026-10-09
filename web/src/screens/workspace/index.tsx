@@ -1,6 +1,7 @@
 import { useEffect } from "preact/hooks";
 import { activeWorkspaceTabId, sessionEngine, workspaceProfileId, workspaceTabs } from "../../state";
 import { refreshSessionInfo } from "../../session-workspace";
+import { DataTab } from "../../grid/DataTab";
 import { SchemaSidebar } from "../../workspace/sidebar";
 import { openWorkspaceTableTab } from "../../workspace/tabs";
 
@@ -24,6 +25,7 @@ export function WorkspaceScreen({ sessionId }: { sessionId: string }) {
 
   const tabs = workspaceTabs.value;
   const activeId = activeWorkspaceTabId.value;
+  const activeTab = tabs.find((t) => t.id === activeId);
 
   return (
     <div class="flex min-h-0 flex-1">
@@ -55,13 +57,19 @@ export function WorkspaceScreen({ sessionId }: { sessionId: string }) {
             ))}
           </div>
         ) : null}
-        <div class="flex flex-1 flex-col p-6">
-          <h2 class="text-15 font-semibold text-ink">Workspace</h2>
-          <p class="text-13 text-ink-2">
-            {activeId
-              ? `Open tab: ${tabs.find((t) => t.id === activeId)?.table ?? activeId}`
-              : `Session ${sessionId} — select a table in the sidebar`}
-          </p>
+        <div class="flex min-h-0 flex-1 flex-col">
+          {activeTab && activeTab.mode === "data" ? (
+            <DataTab key={activeTab.id} sessionId={sessionId} tab={activeTab} />
+          ) : (
+            <div class="flex flex-1 flex-col p-6">
+              <h2 class="text-15 font-semibold text-ink">Workspace</h2>
+              <p class="text-13 text-ink-2">
+                {activeId
+                  ? `Open tab: ${activeTab?.table ?? activeId}`
+                  : `Session ${sessionId} — select a table in the sidebar`}
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

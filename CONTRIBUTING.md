@@ -18,18 +18,18 @@ make test
 make build
 ```
 
-## CI (GitHub Actions disabled)
+## CI (GitHub Actions)
 
-GitHub Actions workflows are **turned off** for now (stored under `.github/workflows.disabled/` to save Actions minutes). Run the same checks locally before you push:
+**`ci`** and **`gate`** run on pull requests and pushes to `main`. **`release`** runs on version tags (`v*`). Run the same checks locally before you push:
 
 | Check | Command |
 | --- | --- |
 | Lint + unit tests | `make lint` and `make test` |
 | Size / memory budgets | `make size bench gate` (Docker for full gate) |
 
-To turn CI back on later, move the YAML files into `.github/workflows/` — see `.github/workflows.disabled/README.md`.
+Secrets and tokens: see [docs/release.md](docs/release.md) and the “GitHub secrets” section in the repo wiki or README (release signing uses `MINISIGN_SECRET_KEY`).
 
-If branch protection on `main` still requires **ci** or **gate** status checks, remove those required checks in GitHub repo settings until workflows are re-enabled.
+If branch protection on `main` requires **ci** / **gate**, ensure those workflow names match after you push.
 
 ## Workflow
 

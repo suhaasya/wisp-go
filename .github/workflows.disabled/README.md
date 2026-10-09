@@ -1,16 +1,16 @@
 # GitHub Actions (disabled)
 
-Workflows here are **not** run by GitHub. Only files under `.github/workflows/` are active.
+Only files under `.github/workflows/` are active.
 
-They were moved aside to avoid Actions minutes cost while the project is in hobby / local-only mode.
+**Active:** `ci.yml`, `gate.yml`, `release.yml`
 
-## Re-enable later
+**Still disabled:** `nightly.yml` (placeholder for LW-048)
+
+## Re-enable nightly
 
 ```bash
-mv .github/workflows.disabled/*.yml .github/workflows/
+mv .github/workflows.disabled/nightly.yml .github/workflows/
 ```
-
-Then turn branch protection status checks back on in the repo settings if you use them (`ci`, `gate`).
 
 ## Local checks (same as CI)
 

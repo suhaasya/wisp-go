@@ -28,8 +28,9 @@ type Session struct {
 	pagerMain driver.Conn
 	metaCache *metadataCache
 
-	changeMu      sync.RWMutex
-	resultChanges map[string]*resultChanges
+	changeMu         sync.RWMutex
+	resultChanges    map[string]*resultChanges
+	structureChanges map[string]*structureChangeSet
 
 	metaInitMu sync.Mutex
 

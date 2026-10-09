@@ -1,6 +1,11 @@
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import preact from "@preact/preset-vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
+
+const webDir = fileURLToPath(new URL(".", import.meta.url));
+const repoRoot = join(webDir, "..");
 
 export default defineConfig({
   plugins: [preact(), tailwindcss()],
@@ -27,5 +32,7 @@ export default defineConfig({
   },
   test: {
     environment: "happy-dom",
+    root: repoRoot,
+    include: ["web/src/**/*.{test,spec}.{ts,tsx}", "tools/**/*.test.ts"],
   },
 });

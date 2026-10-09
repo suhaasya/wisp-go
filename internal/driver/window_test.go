@@ -64,6 +64,16 @@ func TestWindowMarshalJSONTruncatedCell(t *testing.T) {
 	}
 }
 
+func TestWindowMarshalJSONZeroRows(t *testing.T) {
+	w := driver.NewWindow([]driver.ColumnMeta{
+		{Name: "id", Type: "int8"},
+		{Name: "note", Type: "text"},
+	}, 0)
+	if _, err := w.MarshalJSON(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestWindowMarshalJSONTextNullAfterFilledRows(t *testing.T) {
 	const rows = 40
 	w := driver.NewWindow([]driver.ColumnMeta{{Name: "note", Type: "text"}}, rows)

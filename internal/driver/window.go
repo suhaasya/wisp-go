@@ -110,9 +110,11 @@ func NewWindow(cols []ColumnMeta, rows int) *Window {
 			textCols++
 		}
 	}
-	if textCols > 0 && rows > 0 {
+	if textCols > 0 {
 		w.textOffsets = make([]int, textCols*(rows+1))
-		w.arena = make([]byte, 0, textCols*rows*32)
+		if rows > 0 {
+			w.arena = make([]byte, 0, textCols*rows*32)
+		}
 	}
 	w.cols = make([]columnData, len(cols))
 	slot := 0
@@ -339,7 +341,14 @@ func writeColumnValuesJSON(buf *bytes.Buffer, arena []byte, textOffsets []int, c
 			}
 		}
 	case colText:
-		off := textOffsets[col.offsetOff : col.offsetOff+col.offsetLen]
+		if rows == 0 || col.offsetLen == 0 {
+			break
+		}
+		end := col.offsetOff + col.offsetLen
+		if end > len(textOffsets) {
+			break
+		}
+		off := textOffsets[col.offsetOff:end]
 		for r := 0; r < rows; r++ {
 			if r > 0 {
 				buf.WriteByte(',')

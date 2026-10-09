@@ -29,7 +29,7 @@ func (h *SessionsHandler) serveSchema(w http.ResponseWriter, r *http.Request, si
 	case rest == "objects" && r.Method == http.MethodGet:
 		h.getObjects(w, r, sid, refresh)
 	case strings.HasPrefix(rest, "tables/") && r.Method == http.MethodGet:
-		h.getTableDetails(w, r, sid, strings.TrimPrefix(rest, "tables/"), refresh)
+		h.serveTablePath(w, r, sid, strings.TrimPrefix(rest, "tables/"), refresh)
 	default:
 		http.Error(w, "not found", http.StatusNotFound)
 	}
@@ -91,15 +91,28 @@ func (h *SessionsHandler) getObjects(w http.ResponseWriter, r *http.Request, sid
 	writeJSON(w, objectsResponse{Names: names})
 }
 
-func (h *SessionsHandler) getTableDetails(w http.ResponseWriter, r *http.Request, sid, path string, refresh bool) {
+func (h *SessionsHandler) serveTablePath(w http.ResponseWriter, r *http.Request, sid, path string, refresh bool) {
+	schema, table, sub, ok := parseTablesPath(path)
+	if !ok {
+		writeError(w, http.StatusBadRequest, "invalid_path", "expected /tables/{schema}/{table}", "")
+		return
+	}
+	switch {
+	case sub == "ddl":
+		h.getTableDDL(w, r, sid, schema, table, refresh)
+	case strings.HasPrefix(sub, "structure/"):
+		h.serveStructureChanges(w, r, sid, schema, table, strings.TrimPrefix(sub, "structure/"))
+	case sub == "":
+		h.getTableDetails(w, r, sid, schema, table, refresh)
+	default:
+		writeError(w, http.StatusNotFound, "not_found", "Not found.", "")
+	}
+}
+
+func (h *SessionsHandler) getTableDetails(w http.ResponseWriter, r *http.Request, sid, schema, table string, refresh bool) {
 	s, ok := h.mgr.Get(sid)
 	if !ok {
 		writeError(w, http.StatusNotFound, "session_not_found", "Session not found.", "")
-		return
-	}
-	schema, table, ok := splitSchemaTablePath(path)
-	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid_path", "expected /tables/{schema}/{table}", "")
 		return
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
@@ -111,6 +124,73 @@ func (h *SessionsHandler) getTableDetails(w http.ResponseWriter, r *http.Request
 	}
 	s.TouchTabRef(time.Now())
 	writeJSON(w, det)
+}
+
+type tableDDLResponse struct {
+	DDL string `json:"ddl"`
+}
+
+func (h *SessionsHandler) getTableDDL(w http.ResponseWriter, r *http.Request, sid, schema, table string, refresh bool) {
+	s, ok := h.mgr.Get(sid)
+	if !ok {
+		writeError(w, http.StatusNotFound, "session_not_found", "Session not found.", "")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+	ddl, err := s.TableDDL(ctx, schema, table, refresh)
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "table_ddl_failed", "Could not load table DDL.", err.Error())
+		return
+	}
+	s.TouchTabRef(time.Now())
+	writeJSON(w, tableDDLResponse{DDL: ddl})
+}
+
+func parseTablesPath(path string) (schema, table, sub string, ok bool) {
+	path = strings.Trim(path, "/")
+	if strings.HasSuffix(path, "/ddl") {
+		sub = "ddl"
+		path = strings.TrimSuffix(path, "/ddl")
+		return splitSchemaTablePathWithSub(path, sub)
+	}
+	schema, table, tail, ok := splitSchemaTableTail(path)
+	if !ok {
+		return "", "", "", false
+	}
+	return schema, table, tail, true
+}
+
+func splitSchemaTableTail(path string) (schema, table, tail string, ok bool) {
+	path = strings.Trim(path, "/")
+	i := strings.Index(path, "/")
+	if i <= 0 || i >= len(path)-1 {
+		return "", "", "", false
+	}
+	schema, err := url.PathUnescape(path[:i])
+	if err != nil {
+		return "", "", "", false
+	}
+	rest := path[i+1:]
+	j := strings.Index(rest, "/")
+	if j < 0 {
+		table, err = url.PathUnescape(rest)
+		if err != nil || table == "" {
+			return "", "", "", false
+		}
+		return schema, table, "", true
+	}
+	table, err = url.PathUnescape(rest[:j])
+	if err != nil || table == "" {
+		return "", "", "", false
+	}
+	tail = rest[j+1:]
+	return schema, table, tail, true
+}
+
+func splitSchemaTablePathWithSub(path, sub string) (schema, table, outSub string, ok bool) {
+	s, t, ok := splitSchemaTablePath(path)
+	return s, t, sub, ok
 }
 
 func (h *SessionsHandler) getCompletionSchema(w http.ResponseWriter, r *http.Request, sid string) {

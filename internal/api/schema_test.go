@@ -15,3 +15,18 @@ func TestSplitSchemaTablePath(t *testing.T) {
 		t.Fatal("expected fail for single segment")
 	}
 }
+
+func TestParseTablesPath(t *testing.T) {
+	s, tname, sub, ok := parseTablesPath("wisp_meta/parent/ddl")
+	if !ok || sub != "ddl" || s != "wisp_meta" || tname != "parent" {
+		t.Fatalf("ddl path: %q %q %q ok=%v", s, tname, sub, ok)
+	}
+	s, tname, sub, ok = parseTablesPath("wisp_meta/parent")
+	if !ok || sub != "" || s != "wisp_meta" || tname != "parent" {
+		t.Fatalf("details path: %q %q %q ok=%v", s, tname, sub, ok)
+	}
+	s, tname, sub, ok = parseTablesPath("wisp_meta/parent/structure/changes/sql")
+	if !ok || sub != "structure/changes/sql" || s != "wisp_meta" || tname != "parent" {
+		t.Fatalf("structure path: %q %q %q ok=%v", s, tname, sub, ok)
+	}
+}

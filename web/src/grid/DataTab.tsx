@@ -13,6 +13,7 @@ import { TypedConfirmDialog } from "../dialogs/typed-confirm";
 import { pushToast } from "../ui/Toast";
 import { buildColumns } from "../grid/columns";
 import { DataToolbar } from "../workspace/toolbar";
+import { TableModeToolbar } from "../workspace/structure/mode-toolbar";
 import { appliedBrowseQuery, browseQueryKey, updateTableTabBrowseQuery } from "../workspace/browse-query";
 import { FilterBar } from "../workspace/filter-bar";
 import {
@@ -253,6 +254,7 @@ export function DataTab({ sessionId, tab }: { sessionId: string; tab: TableDataT
   }
   return (
     <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <TableModeToolbar schema={tab.schema} table={tab.table} mode="data" />
       {primaryKey.length === 0 ? (
         <p class="border-b border-line bg-raise px-3 py-2 text-12-5 text-ink-2">
           Inline editing requires a primary or unique key on this table.

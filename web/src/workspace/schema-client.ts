@@ -34,7 +34,15 @@ export async function fetchSchemas(
 export type TableDetailsResponse = {
   schema: string;
   table: string;
-  columns: { name: string; type: string }[];
+  kind?: string;
+  columns: {
+    name: string;
+    type: string;
+    nullable?: boolean;
+    default?: string;
+    comment?: string;
+    ordinal?: number;
+  }[];
   primary_key?: string[];
   foreign_keys?: {
     name: string;
@@ -43,16 +51,38 @@ export type TableDetailsResponse = {
     ref_table: string;
     ref_columns: string[];
   }[];
+  indexes?: {
+    name: string;
+    columns: string[];
+    unique?: boolean;
+    primary?: boolean;
+  }[];
+  checks?: { name: string; expression: string }[];
+  triggers?: { name: string; timing: string; events: string; enabled?: boolean }[];
 };
 
 export async function fetchTableDetails(
   sessionId: string,
   schema: string,
   table: string,
-  opts?: { signal?: AbortSignal },
+  opts?: { refresh?: boolean; signal?: AbortSignal },
 ): Promise<TableDetailsResponse> {
-  const path = `/api/v1/sessions/${encodeURIComponent(sessionId)}/tables/${encodeURIComponent(schema)}/${encodeURIComponent(table)}`;
+  const q = opts?.refresh ? "?refresh=true" : "";
+  const path = `/api/v1/sessions/${encodeURIComponent(sessionId)}/tables/${encodeURIComponent(schema)}/${encodeURIComponent(table)}${q}`;
   return request<TableDetailsResponse>("GET", path, undefined, { signal: opts?.signal });
+}
+
+export type TableDDLResponse = { ddl: string };
+
+export async function fetchTableDDL(
+  sessionId: string,
+  schema: string,
+  table: string,
+  opts?: { refresh?: boolean; signal?: AbortSignal },
+): Promise<TableDDLResponse> {
+  const q = opts?.refresh ? "?refresh=true" : "";
+  const path = `/api/v1/sessions/${encodeURIComponent(sessionId)}/tables/${encodeURIComponent(schema)}/${encodeURIComponent(table)}/ddl${q}`;
+  return request<TableDDLResponse>("GET", path, undefined, { signal: opts?.signal });
 }
 
 export async function fetchObjects(

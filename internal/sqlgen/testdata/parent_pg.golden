@@ -1,0 +1,8 @@
+CREATE TABLE wisp_meta.parent (
+  id bigint NOT NULL,
+  status text NOT NULL DEFAULT 'new'::text,
+  CONSTRAINT parent_pkey PRIMARY KEY (id),
+  CONSTRAINT parent_status_check CHECK (status IN ('new', 'done'))
+);
+
+CREATE INDEX idx_parent_status ON wisp_meta.parent USING btree (status);

@@ -119,6 +119,17 @@ func (s *Session) InvalidateMetadata() {
 	}
 }
 
+// SeedTableMetadataForTest inserts cached table details (tests only).
+func (s *Session) SeedTableMetadataForTest(schema, table string, det *driver.TableDetails) {
+	if s == nil || det == nil {
+		return
+	}
+	cache := s.ensureMetaCache()
+	cache.mu.Lock()
+	cache.tables.put(tableDetailsKey{schema: schema, table: table}, det)
+	cache.mu.Unlock()
+}
+
 // MetadataCacheStats returns cache sizes (for tests).
 func (s *Session) MetadataCacheStats() (objectLists, tableDetails int) {
 	s.mu.RLock()

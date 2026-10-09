@@ -10,6 +10,7 @@ import {
 } from "../state";
 import { refreshSessionInfo } from "../session-workspace";
 import { DataTab } from "../grid/DataTab";
+import { StructureTab } from "./structure";
 import { QueryTab } from "./QueryTab";
 import { SchemaSidebar } from "./sidebar";
 import {
@@ -201,6 +202,13 @@ export function WorkspaceShell({ sessionId }: WorkspaceShellProps) {
         <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
           {activeTab?.kind === "table_data" ? (
             <DataTab key={activeTab.id} sessionId={sessionId} tab={activeTab} />
+          ) : activeTab?.kind === "table_structure" ? (
+            <StructureTab
+              key={activeTab.id}
+              sessionId={sessionId}
+              schema={activeTab.schema}
+              table={activeTab.table}
+            />
           ) : activeTab?.kind === "query" ? (
             <QueryTab key={activeTab.id} sessionId={sessionId} tab={activeTab} />
           ) : activeTab ? (

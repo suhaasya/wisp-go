@@ -18,14 +18,11 @@ function clearReconnectTimer(): void {
 function scheduleReconnect(): void {
   clearReconnectTimer();
   reconnectAttempts++;
-  if (backoffMs >= maxBackoffMs) {
-    wispStopped.value = true;
-    return;
-  }
+  const wait = Math.min(backoffMs, maxBackoffMs);
   reconnectTimer = window.setTimeout(() => {
     backoffMs = Math.min(backoffMs * 2, maxBackoffMs);
     openSource();
-  }, backoffMs);
+  }, wait);
 }
 
 function handleMessage(raw: string): void {
@@ -65,6 +62,11 @@ function openSource(): void {
     source.close();
   }
   source = new EventSource("/api/v1/events", { withCredentials: true });
+  source.onopen = () => {
+    backoffMs = 1000;
+    reconnectAttempts = 0;
+    wispStopped.value = false;
+  };
   source.onmessage = (ev) => {
     backoffMs = 1000;
     reconnectAttempts = 0;

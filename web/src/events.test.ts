@@ -8,6 +8,7 @@ class FakeEventSource {
   url: string;
   onmessage: Listener | null = null;
   onerror: (() => void) | null = null;
+  onopen: (() => void) | null = null;
 
   constructor(url: string) {
     this.url = url;
@@ -50,6 +51,20 @@ describe("events", () => {
     });
     expect(themePreference.value).toBe("dark");
     disconnectEvents();
+  });
+
+  it("does not set wispStopped when SSE errors repeat", async () => {
+    vi.useFakeTimers();
+    const { connectEvents, disconnectEvents } = await import("./events");
+    connectEvents();
+    const es = FakeEventSource.instances[0]!;
+    for (let i = 0; i < 20; i++) {
+      es.onerror?.();
+      await vi.advanceTimersByTimeAsync(25_000);
+    }
+    expect(wispStopped.value).toBe(false);
+    disconnectEvents();
+    vi.useRealTimers();
   });
 
   it("sets wispStopped on shutdown event", async () => {

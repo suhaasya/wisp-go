@@ -1,10 +1,10 @@
 import type { WindowBuffer } from "./buffer";
 import {
+  columnWindow,
   isEnumType,
   isNumericType,
   rowNumberWidth,
   totalBodyWidth,
-  visibleColumnIndices,
   type GridColumn,
 } from "./columns";
 import { cellInSelection, rowIsSelected, type SelectionState } from "./selection";
@@ -23,6 +23,7 @@ export type RowPoolOptions = {
   getSelection: () => SelectionState;
   onCellClick: (row: number, col: number, extend: boolean) => void;
   onRowClick: (row: number, extend: boolean) => void;
+  onHorizontalScroll?: (scrollLeft: number, viewportWidth: number) => void;
 };
 
 export type RowPool = {
@@ -52,7 +53,7 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
     }
     for (let i = poolSize; i < need; i++) {
       const row = document.createElement("div");
-      row.className = "absolute left-0 flex w-full border-b border-line-2";
+      row.className = "absolute left-0 flex flex-nowrap border-b border-line-2";
       row.style.height = `${opts.rowHeight}px`;
       row.dataset.poolIndex = String(i);
       opts.bodyEl.appendChild(row);
@@ -140,8 +141,8 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
     opts.bodyEl.style.width = `${totalBodyWidth(columns)}px`;
     opts.bodyEl.style.top = `${headerH}px`;
 
-    const { start, end, visible } = visibleColumnIndices(columns, scrollLeft, viewW);
-    const activeCols = columns.filter((c) => !c.hidden);
+    const { active: activeCols, visible, leadWidth } = columnWindow(columns, scrollLeft, viewW);
+    opts.onHorizontalScroll?.(scrollLeft, viewW);
     const sel = opts.getSelection();
 
     for (let i = 0; i < poolSize; i++) {
@@ -174,6 +175,14 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
         opts.onRowClick(rowIndex, e.shiftKey);
       });
       rowEl.appendChild(rn);
+
+      if (leadWidth > 0) {
+        const lead = document.createElement("div");
+        lead.className = "shrink-0";
+        lead.style.width = `${leadWidth}px`;
+        lead.setAttribute("aria-hidden", "true");
+        rowEl.appendChild(lead);
+      }
 
       for (let vi = 0; vi < visible.length; vi++) {
         const col = visible[vi]!;

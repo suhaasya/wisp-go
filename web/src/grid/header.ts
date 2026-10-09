@@ -1,4 +1,10 @@
-import { clampColumnWidth, rowNumberWidth, type GridColumn } from "./columns";
+import {
+  clampColumnWidth,
+  columnWindow,
+  rowNumberWidth,
+  totalBodyWidth,
+  type GridColumn,
+} from "./columns";
 
 export type HeaderCallbacks = {
   onResize: (colId: string, width: number) => void;
@@ -8,6 +14,7 @@ export type HeaderCallbacks = {
 
 export type GridHeader = {
   setColumns: (columns: GridColumn[]) => void;
+  setHorizontalScroll: (scrollLeft: number, viewportWidth: number) => void;
   destroy: () => void;
 };
 
@@ -18,11 +25,13 @@ export function createGridHeader(
 ): GridHeader {
   const row = document.createElement("div");
   row.className =
-    "sticky top-0 z-20 flex border-b border-line bg-sidebar text-12-5 font-medium text-ink-2";
+    "sticky top-0 z-20 flex flex-nowrap border-b border-line bg-sidebar text-12-5 font-medium text-ink-2";
   row.setAttribute("role", "row");
   root.appendChild(row);
 
   let cols = columns;
+  let scrollLeft = 0;
+  let viewportWidth = 800;
   let dragCol: string | null = null;
   let resizeCol: string | null = null;
   let resizeStartX = 0;
@@ -30,6 +39,8 @@ export function createGridHeader(
 
   function render(): void {
     row.replaceChildren();
+    row.style.width = `${totalBodyWidth(cols)}px`;
+
     const rn = document.createElement("div");
     rn.className =
       "sticky left-0 z-30 shrink-0 border-r border-line-2 bg-sidebar text-right text-11-5 text-ink-3";
@@ -38,29 +49,35 @@ export function createGridHeader(
     rn.textContent = "#";
     row.appendChild(rn);
 
-    for (const col of cols) {
-      if (col.hidden) {
-        continue;
-      }
+    const { visible, leadWidth } = columnWindow(cols, scrollLeft, viewportWidth);
+    if (leadWidth > 0) {
+      const lead = document.createElement("div");
+      lead.className = "shrink-0";
+      lead.style.width = `${leadWidth}px`;
+      lead.setAttribute("aria-hidden", "true");
+      row.appendChild(lead);
+    }
+
+    for (const col of visible) {
       const th = document.createElement("div");
       th.className =
-        "relative shrink-0 border-r border-line-2 px-2.5 py-1.5 select-none whitespace-nowrap";
+        "relative shrink-0 border-r border-line-2 px-2.5 py-1.5 select-none";
       th.style.width = `${col.width}px`;
       th.style.minWidth = `${col.width}px`;
       th.dataset.colId = col.id;
       th.draggable = true;
 
-      const name = document.createElement("span");
+      const name = document.createElement("div");
+      name.className = "truncate font-sans text-12-5 font-medium text-ink-2";
       name.textContent = col.meta.name;
       th.appendChild(name);
-      const small = document.createElement("small");
-      small.className = "mt-0.5 block font-mono text-11-5 font-normal text-ink-3";
+      const small = document.createElement("div");
+      small.className = "mt-0.5 truncate font-mono text-11-5 font-normal text-ink-3";
       small.textContent = col.meta.type;
       th.appendChild(small);
 
       const grip = document.createElement("div");
       grip.className = "absolute right-0 top-0 h-full w-1.5 cursor-col-resize";
-      grip.dataset.resize = col.id;
       th.appendChild(grip);
 
       th.addEventListener("dragstart", (e) => {
@@ -110,6 +127,11 @@ export function createGridHeader(
   return {
     setColumns(next: GridColumn[]) {
       cols = next;
+      render();
+    },
+    setHorizontalScroll(left: number, width: number) {
+      scrollLeft = left;
+      viewportWidth = width;
       render();
     },
     destroy() {

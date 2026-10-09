@@ -56,17 +56,6 @@ export function Grid(props: GridProps) {
     const rowHeight = rowHeightFromSettings();
     const tableName = `${props.schema}.${props.table}`;
 
-    const buffer = createWindowBuffer({
-      windowRows: DEFAULT_WINDOW_ROWS,
-      maxWindows: 3,
-      fetch: (offset, signal) => {
-        if (props.fetchWindow) {
-          return props.fetchWindow(offset, signal);
-        }
-        return fetchResultWindow(props.sessionId, props.rid, offset, DEFAULT_WINDOW_ROWS, signal);
-      },
-    });
-
     let pool: RowPool | null = null;
 
     const header = createGridHeader(headerMount, columns.value, {
@@ -97,6 +86,18 @@ export function Grid(props: GridProps) {
       },
     });
 
+    const buffer = createWindowBuffer({
+      windowRows: DEFAULT_WINDOW_ROWS,
+      maxWindows: 3,
+      onUpdate: () => pool?.scheduleLayout(),
+      fetch: (offset, signal) => {
+        if (props.fetchWindow) {
+          return props.fetchWindow(offset, signal);
+        }
+        return fetchResultWindow(props.sessionId, props.rid, offset, DEFAULT_WINDOW_ROWS, signal);
+      },
+    });
+
     pool = createRowPool({
       scrollEl,
       headerEl: headerMount,
@@ -107,6 +108,7 @@ export function Grid(props: GridProps) {
       total: props.total,
       buffer,
       columns: columns.value,
+      onHorizontalScroll: (left, w) => header.setHorizontalScroll(left, w),
       getSelection: () => selection.value,
       onCellClick(row, col, extend) {
         selection.value = extend

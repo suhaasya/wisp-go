@@ -20,6 +20,20 @@ export function buildColumns(meta: ColumnMeta[]): GridColumn[] {
   }));
 }
 
+export function columnWindow(
+  columns: GridColumn[],
+  scrollLeft: number,
+  viewportWidth: number,
+): { active: GridColumn[]; start: number; visible: GridColumn[]; leadWidth: number } {
+  const active = columns.filter((c) => !c.hidden);
+  const { start, visible } = visibleColumnIndices(columns, scrollLeft, viewportWidth);
+  let leadWidth = 0;
+  for (let i = 0; i < start; i++) {
+    leadWidth += active[i]!.width;
+  }
+  return { active, start, visible, leadWidth };
+}
+
 export function visibleColumnIndices(
   columns: GridColumn[],
   scrollLeft: number,

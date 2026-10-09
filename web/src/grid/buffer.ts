@@ -6,6 +6,8 @@ export type WindowBufferOptions = {
   windowRows?: number;
   maxWindows?: number;
   fetch: FetchWindowFn;
+  /** Called after a window is loaded or cache changes (schedule grid relayout). */
+  onUpdate?: () => void;
 };
 
 export type ViewportOffsets = {
@@ -112,6 +114,7 @@ export function createWindowBuffer(opts: WindowBufferOptions): WindowBuffer {
     cache.set(offset, { payload, lastTouch: ++touchSeq });
     lastFetch = new Date();
     evictIfNeeded();
+    opts.onUpdate?.();
   }
 
   async function ensureViewport(firstRow: number, lastRow: number): Promise<void> {

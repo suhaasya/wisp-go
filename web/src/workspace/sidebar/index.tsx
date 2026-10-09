@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { ApiError } from "../../api";
 import { shellConnection } from "../../state";
 import { fetchSchemas } from "../schema-client";
 import { SchemaSelector, useFilterFocusShortcut } from "./filter";
@@ -53,30 +54,40 @@ export function SchemaSidebar({
     setUi(loadSidebarUiState(storageKey));
   }, [storageKey]);
 
-  useEffect(() => {
-    const ac = new AbortController();
+  const loadSchemas = useCallback(async () => {
     setSchemasError(null);
-    void (async () => {
-      try {
-        const snap = await fetchSchemas(sessionId, { signal: ac.signal });
-        const dbs = snap.databases ?? [];
-        const sc = snap.schemas ?? dbs;
-        setDatabases(dbs);
-        setSchemas(sc);
-        const infoDb = shellConnection.value?.name ?? "";
-        persist((prev) => ({
-          ...prev,
-          selectedDatabase: prev.selectedDatabase || infoDb || dbs[0] || "",
-          selectedSchema: prev.selectedSchema || sc[0] || "",
-        }));
-      } catch {
-        if (!ac.signal.aborted) {
-          setSchemasError("Could not load schemas");
+    try {
+      if (sessionId.startsWith("mock-")) {
+        setSchemasError("Connect to a real database to browse schemas.");
+        return;
+      }
+      const snap = await fetchSchemas(sessionId);
+      const dbs = snap.databases ?? [];
+      const sc = snap.schemas ?? dbs;
+      setDatabases(dbs);
+      setSchemas(sc);
+      const infoDb = shellConnection.value?.name ?? "";
+      persist((prev) => ({
+        ...prev,
+        selectedDatabase: prev.selectedDatabase || infoDb || dbs[0] || "",
+        selectedSchema: prev.selectedSchema || sc[0] || "",
+      }));
+    } catch (err) {
+      let msg = "Could not load schemas.";
+      if (err instanceof ApiError) {
+        if (err.code === "session_not_found") {
+          msg = "Session expired. Go back to Connections and connect again.";
+        } else if (err.message) {
+          msg = err.message;
         }
       }
-    })();
-    return () => ac.abort();
-  }, [sessionId]); // eslint-disable-line react-hooks/exhaustive-deps
+      setSchemasError(msg);
+    }
+  }, [sessionId, persist]);
+
+  useEffect(() => {
+    void loadSchemas();
+  }, [loadSchemas]);
 
   const activeSchema =
     engine === "postgres"
@@ -125,7 +136,14 @@ export function SchemaSidebar({
         onFilterChange={setFilter}
       />
       {schemasError ? (
-        <p class="px-2.5 py-2 text-12-5 text-env-prod">{schemasError}</p>
+        <div class="flex flex-col gap-2 px-2.5 py-2 text-12-5 text-env-prod">
+          <p>{schemasError}</p>
+          {!sessionId.startsWith("mock-") ? (
+            <button type="button" class="text-left text-accent underline" onClick={() => void loadSchemas()}>
+              Retry
+            </button>
+          ) : null}
+        </div>
       ) : (
         <SchemaTree
           sessionId={sessionId}

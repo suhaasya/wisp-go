@@ -164,7 +164,10 @@ func (s *Session) SchemaSnapshot(ctx context.Context) (databases, schemas []stri
 			return nil, nil, err
 		}
 		databases, err = intr.Databases(ctx)
-		return databases, schemas, err
+		if err != nil {
+			return nil, schemas, nil
+		}
+		return databases, schemas, nil
 	default:
 		databases, err = intr.Databases(ctx)
 		return databases, nil, err

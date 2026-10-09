@@ -25,8 +25,7 @@ type Session struct {
 
 	metaCache *metadataCache
 
-	metaOnce sync.Once
-	metaErr  error
+	metaInitMu sync.Mutex
 
 	releaseSSH     func()
 	releaseMetaSSH func()
@@ -118,18 +117,23 @@ func (s *Session) keepAliveSec() int {
 }
 
 func (s *Session) metadataConn(ctx context.Context) (driver.Conn, error) {
-	s.metaOnce.Do(func() {
-		if s.main == nil {
-			s.metaErr = errors.New("session: main connection missing")
-			return
-		}
-		var info driver.ServerInfo
-		s.meta, info, s.releaseMetaSSH, s.metaErr = s.connector.Connect(ctx, s.profile, s.dbPassword, s.sshSec)
-		_ = info
-	})
-	if s.metaErr != nil {
-		return nil, s.metaErr
+	_ = ctx // open uses its own timeout; callers pass request ctx for queries on meta
+	s.metaInitMu.Lock()
+	defer s.metaInitMu.Unlock()
+	if s.meta != nil {
+		return s.meta, nil
 	}
+	if s.main == nil {
+		return nil, errors.New("session: main connection missing")
+	}
+	connectCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	meta, _, release, err := s.connector.Connect(connectCtx, s.profile, s.dbPassword, s.sshSec)
+	if err != nil {
+		return nil, err
+	}
+	s.meta = meta
+	s.releaseMetaSSH = release
 	return s.meta, nil
 }
 
@@ -150,8 +154,6 @@ func (s *Session) closeConns() {
 		s.releaseSSH()
 		s.releaseSSH = nil
 	}
-	s.metaOnce = sync.Once{}
-	s.metaErr = nil
 }
 
 func (s *Session) shutdown() {

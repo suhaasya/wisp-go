@@ -45,6 +45,98 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
 
   const rows: HTMLDivElement[] = [];
   let poolSize = 0;
+  let lastColWinKey = "";
+  let lastFetchFirst = -1;
+  let lastFetchLast = -1;
+
+  function colWinKey(leadWidth: number, visible: GridColumn[]): string {
+    return `${leadWidth}:${visible.map((c) => c.id).join("\t")}`;
+  }
+
+  function bindRowClick(rowEl: HTMLDivElement): void {
+    rowEl.onclick = (e) => {
+      const rowIndex = Number(rowEl.dataset.row);
+      if (Number.isNaN(rowIndex)) {
+        return;
+      }
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-row-rn]")) {
+        opts.onRowClick(rowIndex, e.shiftKey);
+        return;
+      }
+      const cell = target.closest("[data-col-index]");
+      if (cell) {
+        const colIndex = Number(cell.getAttribute("data-col-index"));
+        if (!Number.isNaN(colIndex)) {
+          opts.onCellClick(rowIndex, colIndex, e.shiftKey);
+        }
+      }
+    };
+  }
+
+  function rebuildRowStructure(
+    rowEl: HTMLDivElement,
+    rowIndex: number,
+    leadWidth: number,
+    visible: GridColumn[],
+    activeCols: GridColumn[],
+    sel: SelectionState,
+  ): void {
+    rowEl.replaceChildren();
+
+    const rn = document.createElement("div");
+    rn.className =
+      "sticky left-0 z-10 shrink-0 cursor-pointer border-r border-line-2 bg-sidebar text-right font-sans text-11-5 text-ink-3";
+    rn.style.width = `${rowNumberWidth()}px`;
+    rn.style.minWidth = `${rowNumberWidth()}px`;
+    rn.style.lineHeight = `${opts.rowHeight}px`;
+    rn.dataset.rowRn = "1";
+    rn.textContent = String(rowIndex + 1);
+    rowEl.appendChild(rn);
+
+    if (leadWidth > 0) {
+      const lead = document.createElement("div");
+      lead.className = "shrink-0";
+      lead.style.width = `${leadWidth}px`;
+      lead.setAttribute("aria-hidden", "true");
+      rowEl.appendChild(lead);
+    }
+
+    for (const col of visible) {
+      const colIndex = activeCols.indexOf(col);
+      const cell = document.createElement("div");
+      cell.dataset.colIndex = String(colIndex);
+      if (cellInSelection(sel, rowIndex, colIndex)) {
+        cell.classList.add("bg-accent-soft");
+      }
+      renderCell(cell, rowIndex, colIndex, col);
+      rowEl.appendChild(cell);
+    }
+  }
+
+  function refreshRowCells(
+    rowEl: HTMLDivElement,
+    rowIndex: number,
+    visible: GridColumn[],
+    activeCols: GridColumn[],
+    sel: SelectionState,
+  ): void {
+    const rn = rowEl.querySelector("[data-row-rn]");
+    if (rn) {
+      rn.textContent = String(rowIndex + 1);
+    }
+    const cells = rowEl.querySelectorAll("[data-col-index]");
+    for (let vi = 0; vi < visible.length; vi++) {
+      const col = visible[vi]!;
+      const colIndex = activeCols.indexOf(col);
+      const cell = cells[vi] as HTMLDivElement | undefined;
+      if (!cell) {
+        continue;
+      }
+      cell.classList.toggle("bg-accent-soft", cellInSelection(sel, rowIndex, colIndex));
+      renderCell(cell, rowIndex, colIndex, col);
+    }
+  }
 
   function ensurePoolSize(viewportRows: number): void {
     const need = Math.ceil(viewportRows) + POOL_EXTRA;
@@ -57,6 +149,7 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
       row.style.height = `${opts.rowHeight}px`;
       row.dataset.poolIndex = String(i);
       opts.bodyEl.appendChild(row);
+      bindRowClick(row);
       rows.push(row);
     }
     poolSize = need;
@@ -142,8 +235,19 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
     opts.bodyEl.style.top = `${headerH}px`;
 
     const { active: activeCols, visible, leadWidth } = columnWindow(columns, scrollLeft, viewW);
-    opts.onHorizontalScroll?.(scrollLeft, viewW);
+    const winKey = colWinKey(leadWidth, visible);
+    if (winKey !== lastColWinKey) {
+      lastColWinKey = winKey;
+      opts.onHorizontalScroll?.(scrollLeft, viewW);
+    }
     const sel = opts.getSelection();
+
+    const fetchLast = firstRow + visibleRows + POOL_EXTRA;
+    if (firstRow !== lastFetchFirst || fetchLast !== lastFetchLast) {
+      lastFetchFirst = firstRow;
+      lastFetchLast = fetchLast;
+      void opts.buffer.ensureViewport(firstRow, fetchLast).catch(() => {});
+    }
 
     for (let i = 0; i < poolSize; i++) {
       const rowIndex = firstRow + i;
@@ -159,47 +263,16 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
 
       const selected = rowIsSelected(sel, rowIndex);
       rowEl.className = selected
-        ? "absolute left-0 flex w-full border-b border-line-2 bg-accent-soft"
-        : "absolute left-0 flex w-full border-b border-line-2 hover:bg-raise";
+        ? "absolute left-0 flex flex-nowrap border-b border-line-2 bg-accent-soft"
+        : "absolute left-0 flex flex-nowrap border-b border-line-2 hover:bg-raise";
 
-      rowEl.replaceChildren();
-
-      const rn = document.createElement("div");
-      rn.className =
-        "sticky left-0 z-10 shrink-0 cursor-pointer border-r border-line-2 bg-sidebar text-right font-sans text-11-5 text-ink-3";
-      rn.style.width = `${rowNumberWidth()}px`;
-      rn.style.minWidth = `${rowNumberWidth()}px`;
-      rn.style.lineHeight = `${opts.rowHeight}px`;
-      rn.textContent = String(rowIndex + 1);
-      rn.addEventListener("click", (e) => {
-        opts.onRowClick(rowIndex, e.shiftKey);
-      });
-      rowEl.appendChild(rn);
-
-      if (leadWidth > 0) {
-        const lead = document.createElement("div");
-        lead.className = "shrink-0";
-        lead.style.width = `${leadWidth}px`;
-        lead.setAttribute("aria-hidden", "true");
-        rowEl.appendChild(lead);
-      }
-
-      for (let vi = 0; vi < visible.length; vi++) {
-        const col = visible[vi]!;
-        const colIndex = activeCols.indexOf(col);
-        const cell = document.createElement("div");
-        if (cellInSelection(sel, rowIndex, colIndex)) {
-          cell.classList.add("bg-accent-soft");
-        }
-        cell.addEventListener("click", (e) => {
-          opts.onCellClick(rowIndex, colIndex, e.shiftKey);
-        });
-        renderCell(cell, rowIndex, colIndex, col);
-        rowEl.appendChild(cell);
+      if (rowEl.dataset.colWinKey !== winKey) {
+        rowEl.dataset.colWinKey = winKey;
+        rebuildRowStructure(rowEl, rowIndex, leadWidth, visible, activeCols, sel);
+      } else {
+        refreshRowCells(rowEl, rowIndex, visible, activeCols, sel);
       }
     }
-
-    void opts.buffer.ensureViewport(firstRow, firstRow + visibleRows + POOL_EXTRA).catch(() => {});
   }
 
   function scheduleLayout(): void {
@@ -217,6 +290,9 @@ export function createRowPool(opts: RowPoolOptions): RowPool {
   return {
     setColumns(next) {
       columns = next;
+      lastColWinKey = "";
+      lastFetchFirst = -1;
+      lastFetchLast = -1;
       scheduleLayout();
     },
     setTotalRows(n, t) {

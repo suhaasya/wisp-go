@@ -18,6 +18,15 @@ export type GridHeader = {
   destroy: () => void;
 };
 
+function columnWindowKey(
+  columns: GridColumn[],
+  scrollLeft: number,
+  viewportWidth: number,
+): string {
+  const { start, visible, leadWidth } = columnWindow(columns, scrollLeft, viewportWidth);
+  return `${start}:${leadWidth}:${visible.map((c) => c.id).join("\t")}`;
+}
+
 export function createGridHeader(
   root: HTMLElement,
   columns: GridColumn[],
@@ -32,6 +41,7 @@ export function createGridHeader(
   let cols = columns;
   let scrollLeft = 0;
   let viewportWidth = 800;
+  let lastWindowKey = "";
   let dragCol: string | null = null;
   let resizeCol: string | null = null;
   let resizeStartX = 0;
@@ -127,11 +137,17 @@ export function createGridHeader(
   return {
     setColumns(next: GridColumn[]) {
       cols = next;
+      lastWindowKey = "";
       render();
     },
     setHorizontalScroll(left: number, width: number) {
       scrollLeft = left;
       viewportWidth = width;
+      const key = columnWindowKey(cols, left, width);
+      if (key === lastWindowKey) {
+        return;
+      }
+      lastWindowKey = key;
       render();
     },
     destroy() {

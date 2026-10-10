@@ -66,6 +66,7 @@ release:
 
 brews:
   - name: wisp
+    skip_upload: true
     repository:
       owner: suhaasya
       name: homebrew-wisp
@@ -81,6 +82,7 @@ brews:
 
 scoops:
   - name: wisp
+    skip_upload: true
     repository:
       owner: suhaasya
       name: scoop-wisp

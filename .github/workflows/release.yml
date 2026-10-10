@@ -47,10 +47,24 @@ jobs:
           version: "~> v2"
           install-only: true
 
+      - name: Prepare minisign key
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${MINISIGN_SECRET_KEY:-}" ]; then
+            echo "MINISIGN_SECRET_KEY repository secret is not set" >&2
+            exit 1
+          fi
+          keyf=$(mktemp)
+          chmod 600 "$keyf"
+          printf '%s' "$MINISIGN_SECRET_KEY" > "$keyf"
+          echo "MINISIGN_KEY_FILE=$keyf" >> "$GITHUB_ENV"
+
       - name: Run GoReleaser
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MINISIGN_SECRET_KEY: ${{ secrets.MINISIGN_SECRET_KEY }}
+          MINISIGN_KEY_FILE: ${{ env.MINISIGN_KEY_FILE }}
           # Optional Apple codesign / notarization (skipped when unset)
           AC_API_KEY_ID: ${{ secrets.AC_API_KEY_ID }}
           AC_API_KEY_ISSUER_ID: ${{ secrets.AC_API_KEY_ISSUER_ID }}

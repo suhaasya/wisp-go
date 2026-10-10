@@ -44,17 +44,17 @@ checksum:
 signs:
   - cmd: bash
     signature: "${artifact}.minisig"
+    env:
+      - MINISIGN_KEY_FILE={{ .Env.MINISIGN_KEY_FILE }}
     args:
       - -ceu
       - |
-        if [ -z "${MINISIGN_SECRET_KEY:-}" ]; then
-          echo "MINISIGN_SECRET_KEY not set; skipping minisign"
-          exit 0
+        if [ -z "${MINISIGN_KEY_FILE:-}" ] || [ ! -f "${MINISIGN_KEY_FILE}" ]; then
+          echo "MINISIGN_KEY_FILE not set (configure MINISIGN_SECRET_KEY in CI)" >&2
+          exit 1
         fi
-        keyfile=$(mktemp)
-        trap 'rm -f "$keyfile"' EXIT
-        printf '%s\n' "$MINISIGN_SECRET_KEY" > "$keyfile"
-        minisign -S -s "$keyfile" -m "${artifact}" -x "${signature}"
+        minisign -S -s "${MINISIGN_KEY_FILE}" -x "${signature}" -m "${artifact}"
+        test -s "${signature}"
     artifacts: checksum
 
 snapshot:

@@ -47,11 +47,12 @@ signs:
     args:
       - -ceu
       - |
-        if [ -z "${MINISIGN_KEY_FILE:-}" ] || [ ! -f "${MINISIGN_KEY_FILE}" ]; then
-          echo "MINISIGN_KEY_FILE not set (Prepare minisign key step / MINISIGN_SECRET_KEY secret)" >&2
+        keyf=/tmp/wisp-minisign.key
+        if [ ! -s "$keyf" ]; then
+          echo "missing $keyf (Prepare minisign key step / MINISIGN_SECRET_KEY secret)" >&2
           exit 1
         fi
-        minisign -S -s "${MINISIGN_KEY_FILE}" -x "${signature}" -m "${artifact}"
+        minisign -S -s "$keyf" -x "${signature}" -m "${artifact}"
         test -s "${signature}"
     artifacts: checksum
 

@@ -59,10 +59,11 @@ In **Settings → Actions → General**, use **“Read and write permissions”*
 ### Release signing: `MINISIGN_SECRET_KEY` (you create this)
 
 1. Install [minisign](https://github.com/jedisct1/minisign) locally.
-2. Generate a keypair (once):
+2. Generate a keypair (once). **CI requires an unencrypted key** (no passphrase):
    ```sh
-   minisign -G -p release/minisign.pub -s minisign.key
+   minisign -G -W -p release/minisign.pub -s minisign.key
    ```
+   The secret file must start with `untrusted comment: minisign secret key` (not `encrypted secret key`).
    **Commit** `release/minisign.pub` and the same content in `internal/update/trusted.pub` (embedded in the binary). **Never commit** `minisign.key`.
 3. Put the **entire secret key file** into GitHub:
    - Repo → **Settings → Secrets and variables → Actions → New repository secret**

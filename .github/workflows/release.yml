@@ -56,15 +56,15 @@ jobs:
             echo "MINISIGN_SECRET_KEY repository secret is not set" >&2
             exit 1
           fi
-          keyf=$(mktemp)
-          chmod 600 "$keyf"
+          keyf=/tmp/wisp-minisign.key
+          umask 077
           printf '%s' "$MINISIGN_SECRET_KEY" > "$keyf"
-          echo "MINISIGN_KEY_FILE=$keyf" >> "$GITHUB_ENV"
+          chmod 600 "$keyf"
+          minisign -v
 
       - name: Run GoReleaser
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MINISIGN_KEY_FILE: ${{ env.MINISIGN_KEY_FILE }}
           # Optional Apple codesign / notarization (skipped when unset)
           AC_API_KEY_ID: ${{ secrets.AC_API_KEY_ID }}
           AC_API_KEY_ISSUER_ID: ${{ secrets.AC_API_KEY_ISSUER_ID }}

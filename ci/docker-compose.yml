@@ -145,6 +145,7 @@ services:
       MYSQL_DATABASE: wisp_bench
       MYSQL_USER: wisp
       MYSQL_PASSWORD: wisp
+    command: ["mysqld", "--mysql-native-password=ON"]
     ports:
       - "33069:3306"
     volumes:
@@ -197,6 +198,7 @@ services:
       MYSQL_DATABASE: wisp_bench
       MYSQL_USER: wisp
       MYSQL_PASSWORD: wisp
+    command: ["mysqld", "--mysql-native-password=ON"]
     ports:
       - "33084:3306"
     volumes:
@@ -217,7 +219,7 @@ services:
     ports:
       - "33106:3306"
     volumes:
-      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+      - ./mysql/init/01_bench.sql:/docker-entrypoint-initdb.d/01_bench.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s
@@ -234,7 +236,7 @@ services:
     ports:
       - "33114:3306"
     volumes:
-      - ./mysql/init:/docker-entrypoint-initdb.d:ro
+      - ./mysql/init/01_bench.sql:/docker-entrypoint-initdb.d/01_bench.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s

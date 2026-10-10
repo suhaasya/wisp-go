@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/suhaasya/wisp-go/internal/driver"
@@ -31,15 +32,18 @@ func TestRunScriptCapsQueryResultsAtFive(t *testing.T) {
 		}
 		sql += "SELECT 1"
 	}
+	var evMu sync.Mutex
 	var events []QueryRunEvent
 	s.SetQueryEventHook(func(ev QueryRunEvent) {
+		evMu.Lock()
 		events = append(events, ev)
+		evMu.Unlock()
 	})
 	qid, err := s.StartRun(context.Background(), RunRequest{SQL: sql, Mode: RunModeAll})
 	if err != nil {
 		t.Fatal(err)
 	}
-	waitQueryDone(t, &events, qid)
+	waitQueryDone(t, &evMu, &events, qid)
 	ids := s.QueryRunResultIDs()
 	if len(ids) != 5 {
 		t.Fatalf("kept %d rids want 5: %v", len(ids), ids)

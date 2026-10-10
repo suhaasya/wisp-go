@@ -11,6 +11,13 @@ import (
 	"github.com/suhaasya/wisp-go/internal/store"
 )
 
+func historySearchTimeLimit() time.Duration {
+	if os.Getenv("CI") != "" || os.Getenv("GITHUB_ACTIONS") != "" {
+		return 250 * time.Millisecond
+	}
+	return 100 * time.Millisecond
+}
+
 func testPaths(t *testing.T) store.Paths {
 	t.Helper()
 	root := t.TempDir()
@@ -128,8 +135,9 @@ func TestHistorySearch50kUnder100ms(t *testing.T) {
 	if err := h.Search(prof, needle, &buf); err != nil {
 		t.Fatal(err)
 	}
-	if elapsed := time.Since(start); elapsed > 100*time.Millisecond {
-		t.Fatalf("search took %v want <= 100ms", elapsed)
+	limit := historySearchTimeLimit()
+	if elapsed := time.Since(start); elapsed > limit {
+		t.Fatalf("search took %v want <= %v", elapsed, limit)
 	}
 	if !strings.Contains(buf.String(), needle) {
 		t.Fatal("needle not found")

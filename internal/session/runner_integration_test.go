@@ -4,6 +4,7 @@ package session
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -31,9 +32,12 @@ func TestRunScriptMultiStatementPostgres(t *testing.T) {
 	ctx := context.Background()
 	s := NewTestSession(store.Profile{Engine: "postgres", Env: "local"})
 	s.main = conn
+	var evMu sync.Mutex
 	var events []QueryRunEvent
 	s.SetQueryEventHook(func(ev QueryRunEvent) {
+		evMu.Lock()
 		events = append(events, ev)
+		evMu.Unlock()
 	})
 	qid, err := s.StartRun(ctx, RunRequest{
 		SQL:  "SELECT 1 AS a; SELECT 2 AS b;",
@@ -42,13 +46,15 @@ func TestRunScriptMultiStatementPostgres(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	waitQueryDone(t, &events, qid)
+	waitQueryDone(t, &evMu, &events, qid)
+	evMu.Lock()
 	rids := 0
 	for _, ev := range events {
 		if ev.QID == qid && ev.RID != "" {
 			rids++
 		}
 	}
+	evMu.Unlock()
 	if rids != 2 {
 		t.Fatalf("rids=%d events=%+v", rids, events)
 	}
@@ -60,9 +66,12 @@ func TestCancelRunPostgresSleep(t *testing.T) {
 	ctx := context.Background()
 	s := NewTestSession(store.Profile{Engine: "postgres", Env: "local"})
 	s.main = conn
+	var evMu sync.Mutex
 	var events []QueryRunEvent
 	s.SetQueryEventHook(func(ev QueryRunEvent) {
+		evMu.Lock()
 		events = append(events, ev)
+		evMu.Unlock()
 	})
 	start := time.Now()
 	qid, err := s.StartRun(ctx, RunRequest{
@@ -76,17 +85,19 @@ func TestCancelRunPostgresSleep(t *testing.T) {
 	if err := s.CancelRun(qid); err != nil {
 		t.Fatal(err)
 	}
-	waitQueryDone(t, &events, qid)
+	waitQueryDone(t, &evMu, &events, qid)
 	elapsed := time.Since(start)
 	if elapsed > 500*time.Millisecond {
 		t.Fatalf("cancel took %v want <= 500ms", elapsed)
 	}
+	evMu.Lock()
 	cancelled := false
 	for _, ev := range events {
 		if ev.QID == qid && ev.Cancelled {
 			cancelled = true
 		}
 	}
+	evMu.Unlock()
 	if !cancelled {
 		t.Fatalf("events=%+v", events)
 	}
@@ -105,15 +116,18 @@ func TestRunFiftyStatementsRSSPostgres(t *testing.T) {
 		}
 		sql += "SELECT 1"
 	}
+	var evMu sync.Mutex
 	var events []QueryRunEvent
 	s.SetQueryEventHook(func(ev QueryRunEvent) {
+		evMu.Lock()
 		events = append(events, ev)
+		evMu.Unlock()
 	})
 	qid, err := s.StartRun(ctx, RunRequest{SQL: sql, Mode: RunModeAll})
 	if err != nil {
 		t.Fatal(err)
 	}
-	waitQueryDone(t, &events, qid)
+	waitQueryDone(t, &evMu, &events, qid)
 	if len(s.QueryRunResultIDs()) > 5 {
 		t.Fatalf("too many open results: %d", len(s.QueryRunResultIDs()))
 	}

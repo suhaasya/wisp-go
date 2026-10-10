@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/suhaasya/wisp-go/internal/store"
 )
 
-func mockSessionConn(t *testing.T, execLog *[]string) *Session {
+func mockSessionConn(t *testing.T, execLog *[]string, execLogMu *sync.Mutex) *Session {
 	t.Helper()
 	cfg := mock.Config{
 		TotalRows: 3,
@@ -18,7 +19,8 @@ func mockSessionConn(t *testing.T, execLog *[]string) *Session {
 			{Name: "id", Type: "int8"},
 			{Name: "name", Type: "text"},
 		},
-		ExecLog: execLog,
+		ExecLog:   execLog,
+		ExecLogMu: execLogMu,
 	}
 	conn, err := mock.Driver{}.Open(t.Context(), driver.ConnectParams{Extra: cfg})
 	if err != nil {
@@ -30,14 +32,21 @@ func mockSessionConn(t *testing.T, execLog *[]string) *Session {
 	return s
 }
 
-func waitQueryDone(t *testing.T, events *[]QueryRunEvent, qid string) {
+func waitQueryDone(t *testing.T, mu *sync.Mutex, events *[]QueryRunEvent, qid string) {
 	t.Helper()
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
+		mu.Lock()
+		done := false
 		for _, ev := range *events {
 			if ev.QID == qid && ev.Done {
-				return
+				done = true
+				break
 			}
+		}
+		mu.Unlock()
+		if done {
+			return
 		}
 		time.Sleep(5 * time.Millisecond)
 	}
@@ -45,11 +54,15 @@ func waitQueryDone(t *testing.T, events *[]QueryRunEvent, qid string) {
 }
 
 func TestRunScriptSequentialMock(t *testing.T) {
+	var logMu sync.Mutex
 	var log []string
-	s := mockSessionConn(t, &log)
+	s := mockSessionConn(t, &log, &logMu)
+	var evMu sync.Mutex
 	var events []QueryRunEvent
 	s.SetQueryEventHook(func(ev QueryRunEvent) {
+		evMu.Lock()
 		events = append(events, ev)
+		evMu.Unlock()
 	})
 
 	sql := "SELECT 1;\nUPDATE t SET x = 1;\nSELECT 2"
@@ -60,8 +73,9 @@ func TestRunScriptSequentialMock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	waitQueryDone(t, &events, qid)
+	waitQueryDone(t, &evMu, &events, qid)
 
+	evMu.Lock()
 	var rids int
 	for _, ev := range events {
 		if ev.QID != qid {
@@ -71,10 +85,15 @@ func TestRunScriptSequentialMock(t *testing.T) {
 			rids++
 		}
 	}
+	evMu.Unlock()
 	if rids != 2 {
 		t.Fatalf("result tabs=%d want 2 events=%+v", rids, events)
 	}
-	if len(log) != 1 {
-		t.Fatalf("exec log=%v want one UPDATE", log)
+	logMu.Lock()
+	nLog := len(log)
+	logCopy := append([]string(nil), log...)
+	logMu.Unlock()
+	if nLog != 1 {
+		t.Fatalf("exec log=%v want one UPDATE", logCopy)
 	}
 }

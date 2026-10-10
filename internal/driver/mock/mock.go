@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/suhaasya/wisp-go/internal/driver"
@@ -20,6 +21,7 @@ type Config struct {
 	TotalRows int
 	Columns   []driver.ColumnMeta
 	ExecLog   *[]string
+	ExecLogMu *sync.Mutex
 	PingFail  func() bool
 	// TxFailOnExec fails the transaction on the Nth Exec (1-based).
 	TxFailOnExec int
@@ -68,7 +70,13 @@ func (c *conn) Exec(ctx context.Context, sql string, args ...any) (driver.ExecRe
 		return driver.ExecResult{}, err
 	}
 	if c.cfg.ExecLog != nil {
-		*c.cfg.ExecLog = append(*c.cfg.ExecLog, sql)
+		if c.cfg.ExecLogMu != nil {
+			c.cfg.ExecLogMu.Lock()
+			*c.cfg.ExecLog = append(*c.cfg.ExecLog, sql)
+			c.cfg.ExecLogMu.Unlock()
+		} else {
+			*c.cfg.ExecLog = append(*c.cfg.ExecLog, sql)
+		}
 	}
 	return driver.ExecResult{}, nil
 }

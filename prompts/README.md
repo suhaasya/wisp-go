@@ -50,3 +50,4 @@
 | 46 | [LW-046](LW-046.md) | End-to-end test matrix | LW-044, LW-020 |
 | 47 | [LW-047](LW-047.md) | Performance and memory audit | LW-046 |
 | 48 | [LW-048](LW-048.md) | Documentation, beta and 1.0 release | LW-045, LW-047 |
+| — | [LW-049](LW-049.md) | Release finish checklist (manual backlog) | LW-048 |

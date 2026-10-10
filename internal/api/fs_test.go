@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -44,9 +45,13 @@ func TestFSListHomeRelative(t *testing.T) {
 
 func TestFSListRejectsOutsideHome(t *testing.T) {
 	home := t.TempDir()
+	outside, err := filepath.Abs(filepath.Join(home, "..", "wisp-fs-outside"))
+	if err != nil {
+		t.Fatal(err)
+	}
 	h := api.NewFSHandler(home)
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/fs/list?path=/etc", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/fs/list?path="+url.QueryEscape(outside), nil)
 	h.ServeHTTP(rec, req)
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("status = %d", rec.Code)

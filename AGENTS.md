@@ -45,7 +45,7 @@ GLOSSARY.md           domain words; use them in test and function names
 docs/PRD.md           product requirements (source of truth for behaviour)
 design/               HTML mockup + screenshots of every screen (light/dark)
 
-Import rules: api -> session -> pager/sqlgen -> driver -> transport;
+Import rules: api -> session, store, driver, pager, sqlgen (handlers stay thin; logic in session); session -> pager/sqlgen -> driver -> transport;
 store is used by api and session; server uses api. No cycles. CGO stays OFF.
 
 ## 3. Go rules

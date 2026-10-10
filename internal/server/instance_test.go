@@ -2,6 +2,7 @@ package server_test
 
 import (
 	"os"
+	"runtime"
 	"testing"
 
 	"github.com/suhaasya/wisp-go/internal/server"
@@ -31,6 +32,9 @@ func TestInstanceLock_exclusive(t *testing.T) {
 
 func TestWriteInstanceJSON_mode(t *testing.T) {
 	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix file mode bits are not enforced on Windows temp files")
+	}
 	dir := t.TempDir()
 	path := dir + "/instance.json"
 	rec := server.InstanceRecord{PID: 42, Port: 8080}

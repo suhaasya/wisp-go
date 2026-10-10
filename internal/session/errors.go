@@ -142,6 +142,13 @@ func MapConnectionError(err error) ConnectionError {
 			Detail:  err.Error(),
 		}
 	}
+	if strings.Contains(low, "connection refused") || strings.Contains(low, "actively refused") {
+		return ConnectionError{
+			Code:    "connection_refused",
+			Message: "The server refused the connection.",
+			Detail:  err.Error(),
+		}
+	}
 	return ConnectionError{
 		Code:    "connection_failed",
 		Message: "Could not connect to the database.",

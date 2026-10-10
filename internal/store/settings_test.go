@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/suhaasya/wisp-go/internal/store"
@@ -26,6 +27,9 @@ func TestSettingsStore_missingFileReturnsDefaults(t *testing.T) {
 
 func TestSettingsStore_roundTripAndMode0600(t *testing.T) {
 	t.Parallel()
+	if runtime.GOOS == "windows" {
+		t.Skip("Unix file mode bits are not enforced on Windows temp files")
+	}
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
 	st := store.NewSettingsStore(path)

@@ -33,6 +33,14 @@ func TestMapConnectionErrorRefused(t *testing.T) {
 	}
 }
 
+func TestMapConnectionErrorRefusedConnectexMessage(t *testing.T) {
+	err := errors.New(`failed to connect: dial tcp 127.0.0.1:1: connectex: No connection could be made because the target machine actively refused it.`)
+	got := session.MapConnectionError(err)
+	if got.Code != "connection_refused" {
+		t.Fatalf("code = %q", got.Code)
+	}
+}
+
 func TestMapConnectionErrorTimeout(t *testing.T) {
 	err := context.DeadlineExceeded
 	got := session.MapConnectionError(err)

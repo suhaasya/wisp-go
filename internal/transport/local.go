@@ -203,7 +203,7 @@ func OSUsername() string {
 
 // DetectLocal scans known socket locations and localhost ports.
 func DetectLocal(ctx context.Context) []LocalSuggestion {
-	var out []LocalSuggestion
+	out := make([]LocalSuggestion, 0)
 	user := OSUsername()
 
 	for _, dir := range KnownPostgresSocketDirs() {

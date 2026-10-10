@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:manifest": "node --test matrix/manifest.test.mjs"
   },
   "devDependencies": {
     "@playwright/test": "1.55.0"

@@ -1,0 +1,59 @@
+name: nightly
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  e2e-matrix-full:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
+
+      - name: Start database matrix
+        run: docker compose -f ci/docker-compose.yml up -d --wait pg12 pg13 pg14 pg15 pg16 pg17 postgres-tls mysql57 mysql80 mysql84 mariadb106 mariadb114 ssh1 ssh2
+
+      - name: Build wisp
+        run: make build
+
+      - name: Install Playwright
+        run: cd e2e && npm ci && npx playwright install chromium
+
+      - name: Matrix E2E (nightly)
+        env:
+          WISP_E2E_FRESH: "1"
+          WISP_MATRIX_TAG: nightly
+          PLAYWRIGHT_JSON_OUTPUT_NAME: matrix-report.json
+        run: cd e2e && npx playwright test --project=matrix --reporter=list --reporter=json
+
+      - name: Generate compatibility doc
+        if: always()
+        run: node tools/gen-compatibility.mjs e2e/matrix-report.json
+
+      - name: Upload matrix report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: matrix-report
+          path: |
+            e2e/matrix-report.json
+            docs/compatibility.md

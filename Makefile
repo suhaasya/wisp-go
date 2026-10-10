@@ -50,3 +50,7 @@ release-snapshot: web
 e2e: build
 	cd e2e && npm ci && npx playwright install chromium firefox webkit
 	cd e2e && WISP_E2E_FRESH=1 npx playwright test --project=chromium --project=firefox --project=webkit
+
+e2e-matrix: build
+	cd e2e && npm ci && npx playwright install chromium
+	cd e2e && WISP_E2E_FRESH=1 WISP_MATRIX_TAG=$${WISP_MATRIX_TAG:-pr} npx playwright test --project=matrix

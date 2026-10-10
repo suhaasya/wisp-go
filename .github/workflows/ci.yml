@@ -142,3 +142,47 @@ jobs:
             bin/wisp-linux-arm64
             bin/wisp-windows-amd64.exe
           if-no-files-found: error
+
+  e2e-matrix-pr:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            e2e/package-lock.json
+
+      - name: Download wisp binary
+        uses: actions/download-artifact@v4
+        with:
+          name: wisp-binaries
+          path: bin
+
+      - name: Install Linux wisp binary
+        run: |
+          mkdir -p bin
+          mv bin/wisp-linux-amd64 bin/wisp
+          chmod +x bin/wisp
+
+      - name: Start PR matrix databases
+        run: docker compose -f ci/docker-compose.yml up -d --wait pg17 mysql84 mariadb114 ssh1 ssh2
+
+      - name: Install Playwright
+        run: cd e2e && npm ci && npx playwright install chromium
+
+      - name: Matrix E2E (PR subset)
+        env:
+          WISP_E2E_FRESH: "1"
+          WISP_MATRIX_TAG: pr
+        run: cd e2e && npx playwright test --project=matrix

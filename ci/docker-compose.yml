@@ -263,9 +263,11 @@ services:
     depends_on:
       ssh2:
         condition: service_healthy
-      pg16:
+      pg17:
         condition: service_healthy
       mysql84:
+        condition: service_healthy
+      mariadb114:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "pgrep sshd >/dev/null"]

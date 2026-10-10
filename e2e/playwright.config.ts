@@ -21,9 +21,15 @@ export default defineConfig({
     trace: "on-first-retry",
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"], ...chromiumLaunch } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
+    { name: "chromium", testIgnore: /matrix\//, use: { ...devices["Desktop Chrome"], ...chromiumLaunch } },
+    { name: "firefox", testIgnore: /matrix\//, use: { ...devices["Desktop Firefox"] } },
+    { name: "webkit", testIgnore: /matrix\//, use: { ...devices["Desktop Safari"] } },
+    {
+      name: "matrix",
+      testMatch: /matrix\/.*\.spec\.ts/,
+      timeout: 180_000,
+      use: { ...devices["Desktop Chrome"], ...chromiumLaunch },
+    },
   ],
   globalSetup: path.join(e2eDir, "global-setup.mjs"),
   globalTeardown: path.join(e2eDir, "global-teardown.mjs"),

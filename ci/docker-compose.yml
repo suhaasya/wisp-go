@@ -5,21 +5,13 @@ services:
       POSTGRES_USER: wisp
       POSTGRES_PASSWORD: wisp
       POSTGRES_DB: wisp_bench
-    command:
-      - postgres
-      - -c
-      - ssl=on
-      - -c
-      - ssl_cert_file=/certs/server.pem
-      - -c
-      - ssl_key_file=/certs/server.key
-      - -c
-      - ssl_ca_file=/certs/ca.pem
+    entrypoint: ["/bin/bash", "/postgres-tls-entrypoint.sh"]
     ports:
       - "54330:5432"
     volumes:
       - ./certs:/certs:ro
       - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - ./postgres/postgres-tls-entrypoint.sh:/postgres-tls-entrypoint.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U wisp -d wisp_bench"]
       interval: 5s

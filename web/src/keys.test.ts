@@ -96,6 +96,18 @@ describe("eventMatchesBinding", () => {
     expect(eventMatchesBinding(e, "Alt-T")).toBe(true);
   });
 
+  it("matches Mod-/ when slash comes from physical key code", () => {
+    const e = {
+      metaKey: true,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false,
+      key: "?",
+      code: "Slash",
+    } as KeyboardEvent;
+    expect(eventMatchesBinding(e, "Mod-/")).toBe(true);
+  });
+
   it("matches Alt-T on macOS when Option produces a special character", () => {
     const e = {
       metaKey: false,

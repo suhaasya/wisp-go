@@ -116,7 +116,8 @@ export default async function globalSetup() {
     return;
   }
 
-  let baseURL = await readRunningBaseURL();
+  const forceFresh = process.env.WISP_E2E_FRESH === "1";
+  let baseURL = forceFresh ? null : await readRunningBaseURL();
   let spawned = null;
 
   if (!baseURL) {

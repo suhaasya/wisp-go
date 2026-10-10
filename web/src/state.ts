@@ -40,7 +40,19 @@ export const paletteOpen = signal(false);
 export const shortcutHelpOpen = signal(false);
 
 export function openCommandPalette(): void {
-  paletteOpen.value = true;
+  void import("./palette-load").then(({ loadCommandPalette }) =>
+    loadCommandPalette().then(() => {
+      paletteOpen.value = true;
+    }),
+  );
+}
+
+export function toggleShortcutHelp(): void {
+  void import("./shortcut-help-load").then(({ loadShortcutHelp }) =>
+    loadShortcutHelp().then(() => {
+      shortcutHelpOpen.value = !shortcutHelpOpen.value;
+    }),
+  );
 }
 
 export type TableFilterCondition = {

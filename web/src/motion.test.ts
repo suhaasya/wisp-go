@@ -6,13 +6,19 @@ describe("prefersReducedMotion", () => {
     vi.unstubAllGlobals();
   });
 
-  it("reads matchMedia reduce preference", () => {
-    vi.stubGlobal("matchMedia", (q: string) => ({
-      matches: q.includes("reduce"),
-      media: q,
-      addEventListener: () => {},
-      removeEventListener: () => {},
+  it("is true when the user prefers reduced motion", () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(prefers-reduced-motion: reduce)",
+      media: query,
     }));
     expect(prefersReducedMotion()).toBe(true);
+  });
+
+  it("is false when motion is not reduced", () => {
+    vi.stubGlobal("matchMedia", () => ({
+      matches: false,
+      media: "",
+    }));
+    expect(prefersReducedMotion()).toBe(false);
   });
 });

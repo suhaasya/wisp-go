@@ -40,7 +40,9 @@ cd e2e && npm ci && npx playwright install chromium firefox webkit
 make build
 ./bin/wisp --no-browser --port 19287   # or use your dev instance on 8787
 
-cd e2e && npx playwright test --project=chromium --project=firefox --project=webkit
+cd e2e && WISP_E2E_FRESH=1 npx playwright test --project=chromium --project=firefox --project=webkit
+
+`WISP_E2E_FRESH=1` (default in `make e2e`) starts a new `bin/wisp` so embedded assets match the last `make build`, instead of reusing an older loopback instance.
 
 On macOS, the `chromium` project uses **installed Google Chrome** by default (avoids a broken partial Playwright Chromium cache). Override with `PW_CHROMIUM_CHANNEL` or reinstall browsers after removing `~/Library/Caches/ms-playwright/__dirlock`.
 

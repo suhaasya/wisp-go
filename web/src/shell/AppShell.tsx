@@ -3,7 +3,9 @@ import type { ComponentType } from "preact";
 import { route, startRouter, stopRouter } from "../router";
 import { RouteScreen } from "../screens/RouteScreen";
 import { handleGlobalKeydown } from "../keydispatch";
-import { sessionEnded, wispStopped } from "../state";
+import { loadCommandPalette } from "../palette-load";
+import { loadShortcutHelp } from "../shortcut-help-load";
+import { paletteOpen, sessionEnded, shortcutHelpOpen, wispStopped } from "../state";
 import { ToastViewport } from "../ui/Toast";
 import { StatusBar } from "./StatusBar";
 import { TitleBar } from "./TitleBar";
@@ -29,9 +31,12 @@ function StoppedBanner() {
 }
 
 export function AppShell() {
+  void paletteOpen.value;
+  void shortcutHelpOpen.value;
   const [Gallery, setGallery] = useState<ComponentType | null>(null);
   const [Palette, setPalette] = useState<ComponentType | null>(null);
   const [ShortcutHelp, setShortcutHelp] = useState<ComponentType | null>(null);
+  const [chromeReady, setChromeReady] = useState(false);
 
   useEffect(() => {
     startRouter();
@@ -39,8 +44,11 @@ export function AppShell() {
   }, []);
 
   useEffect(() => {
-    void import("../palette/index").then((mod) => setPalette(() => mod.CommandPalette));
-    void import("../shortcut-help").then((mod) => setShortcutHelp(() => mod.ShortcutHelpOverlay));
+    void Promise.all([loadCommandPalette(), loadShortcutHelp()]).then(([paletteMod, helpMod]) => {
+      setPalette(() => paletteMod.CommandPalette);
+      setShortcutHelp(() => helpMod.ShortcutHelpOverlay);
+      setChromeReady(true);
+    });
   }, []);
 
   useEffect(() => {
@@ -88,6 +96,11 @@ export function AppShell() {
       <ToastViewport />
       {Palette ? <Palette /> : null}
       {ShortcutHelp ? <ShortcutHelp /> : null}
+      {chromeReady ? (
+        <span data-testid="app-chrome-ready" class="sr-only">
+          ready
+        </span>
+      ) : null}
     </div>
   );
 }

@@ -29,11 +29,11 @@ Record **Pass/Fail** when validating a release (keyboard only, no pointer). Auto
 
 | Flow | Steps | Auto |
 | --- | --- | --- |
-| Open command palette | `Mod+K`, type filter, Esc close | `e2e/tests/keyboard-palette.spec.ts` (Chromium ✓) |
-| Shortcut cheat sheet | `Mod+/`, Esc close | `e2e/tests/dialog.spec.ts` (Chromium ✓) |
+| Open command palette | `Mod+K`, type filter, Esc close | `e2e/tests/keyboard-palette.spec.ts` (all engines) |
+| Shortcut cheat sheet | `Mod+/`, Esc close | `e2e/tests/dialog.spec.ts` (all engines) |
 | Connections list | Tab to card, Enter connect (needs profile) | Manual |
 | New connection form | Tab through General fields; section tabs | Manual |
-| Workspace tab switch | Alt+1…9 or activate tab in tablist | `e2e/tests/workspace-tabs-a11y.spec.ts` (Chromium ✓; bench tablist) |
+| Workspace tab switch | Alt+1…9 or Arrow keys + Enter in tablist | `e2e/tests/workspace-tabs-a11y.spec.ts` (all engines; bench tablist) |
 | New query tab | Alt+T | Manual |
 | Close tab | Alt+W | Manual |
 | Schema sidebar | Tree focus, expand group, open table | Manual |
@@ -46,5 +46,6 @@ Record **Pass/Fail** when validating a release (keyboard only, no pointer). Auto
 
 ## Safari / Firefox
 
-- Tab memory meter hidden without `performance.memory` (see `docs/browser-support.md`).
-- Re-run the checklist in Firefox and Safari before 1.0; file issues for engine-specific focus or shortcut gaps.
+- Tab memory meter hidden without `performance.memory` (see `docs/browser-support.md`); covered by `e2e/tests/tab-memory.spec.ts` on Firefox/WebKit.
+- **Mod+K** and **Mod+/** work from text fields (search, inputs), not only when focus is on the page chrome.
+- Re-run manual checklist rows before 1.0; file engine-specific gaps not covered by Playwright.

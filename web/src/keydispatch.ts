@@ -8,7 +8,7 @@ import {
   resolveKeybindings,
 } from "./keys";
 import { navigate, route } from "./router";
-import { openCommandPalette, shortcutHelpOpen, workspaceTabs } from "./state";
+import { openCommandPalette, toggleShortcutHelp, workspaceTabs } from "./state";
 import { getSettings } from "./settings";
 import { activateTabAtIndex, closeActiveTab, newQueryTab, activateWorkspaceTab } from "./workspace/tabs";
 export type QueryKeyRunners = {
@@ -57,17 +57,25 @@ export function handleGlobalKeydown(e: KeyboardEvent): void {
   };
 
   if (
-    tryBinding("shortcut-help", () => {
-      shortcutHelpOpen.value = !shortcutHelpOpen.value;
-    })
+    tryBinding(
+      "shortcut-help",
+      () => {
+        toggleShortcutHelp();
+      },
+      { allowInField: true },
+    )
   ) {
     return;
   }
 
   if (
-    tryBinding("command-palette", () => {
-      openCommandPalette();
-    })
+    tryBinding(
+      "command-palette",
+      () => {
+        openCommandPalette();
+      },
+      { allowInField: true },
+    )
   ) {
     return;
   }

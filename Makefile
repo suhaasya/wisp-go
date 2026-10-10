@@ -49,4 +49,4 @@ release-snapshot: web
 
 e2e: build
 	cd e2e && npm ci && npx playwright install chromium firefox webkit
-	cd e2e && npx playwright test --project=chromium --project=firefox --project=webkit
+	cd e2e && WISP_E2E_FRESH=1 npx playwright test --project=chromium --project=firefox --project=webkit

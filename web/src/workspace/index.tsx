@@ -13,6 +13,7 @@ import { DataTab } from "../grid/DataTab";
 import { StructureTab } from "./structure";
 import { QueryTab } from "./QueryTab";
 import { ServerTools } from "./server-tools";
+import { handleHorizontalTablistKeydown } from "../ui/tablist-keys";
 import { SchemaSidebar } from "./sidebar";
 import {
   activateWorkspaceTab,
@@ -118,6 +119,14 @@ export function WorkspaceShell({ sessionId }: WorkspaceShellProps) {
           <div
             class="flex h-[34px] shrink-0 overflow-x-auto border-b border-line bg-sidebar"
             role="tablist"
+            onKeyDown={(e) =>
+              handleHorizontalTablistKeydown(e, (index) => {
+                const tab = tabs[index];
+                if (tab) {
+                  activateWorkspaceTab(tab.id);
+                }
+              })
+            }
           >
             {tabs.map((tab, index) => {
               const active = tab.id === activeId;

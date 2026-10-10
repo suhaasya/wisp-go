@@ -5,7 +5,6 @@ set -eu
 REPO="${WISP_INSTALL_REPO:-suhaasya/wisp-go}"
 VERSION="${WISP_VERSION:-latest}"
 BASE="${WISP_INSTALL_BASE:-https://github.com}/${REPO}"
-PUBKEY="${WISP_PUBLIC_KEY:-$(dirname "$0")/../release/minisign.pub}"
 
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
 case "$os" in
@@ -41,6 +40,7 @@ if [ "$VERSION" = "latest" ]; then
 else
   tag="$VERSION"
 fi
+case "$tag" in v*) ;; *) tag="v${tag}" ;; esac
 ver=$(echo "$tag" | sed 's/^v//')
 archive="wisp_${ver}_${goos}_${goarch}.${ext}"
 base_url="${BASE}/releases/download/${tag}"
@@ -48,9 +48,18 @@ base_url="${BASE}/releases/download/${tag}"
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT INT TERM
 
+if [ -n "${WISP_PUBLIC_KEY:-}" ]; then
+  pubkey="$WISP_PUBLIC_KEY"
+elif [ -f "$(dirname "$0")/../release/minisign.pub" ] 2>/dev/null && [ "$(basename "$0")" != "sh" ]; then
+  pubkey="$(cd "$(dirname "$0")/.." && pwd)/release/minisign.pub"
+else
+  pubkey="$tmpdir/minisign.pub"
+  curl -fsSL -o "$pubkey" "https://raw.githubusercontent.com/${REPO}/${tag}/release/minisign.pub"
+fi
+
 curl -fsSL -o "$tmpdir/checksums.txt" "${base_url}/checksums.txt"
 curl -fsSL -o "$tmpdir/checksums.txt.minisig" "${base_url}/checksums.txt.minisig"
-minisign -Vqm "$tmpdir/checksums.txt" -x "$tmpdir/checksums.txt.minisig" -p "$PUBKEY"
+minisign -Vqm "$tmpdir/checksums.txt" -x "$tmpdir/checksums.txt.minisig" -p "$pubkey"
 
 curl -fsSL -o "$tmpdir/$archive" "${base_url}/${archive}"
 line=$(grep "  ${archive}\$" "$tmpdir/checksums.txt" || true)

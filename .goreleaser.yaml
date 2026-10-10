@@ -79,7 +79,7 @@ brews:
 
 scoops:
   - name: wisp
-    bucket:
+    repository:
       owner: suhaasya
       name: scoop-wisp
     homepage: https://github.com/suhaasya/wisp-go

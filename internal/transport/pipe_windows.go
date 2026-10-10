@@ -4,7 +4,6 @@ package transport
 
 import (
 	"context"
-	"fmt"
 	"net"
 
 	winio "github.com/Microsoft/go-winio"

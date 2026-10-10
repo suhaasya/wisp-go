@@ -38,7 +38,7 @@ jobs:
             *) echo "unsupported runner arch: $(uname -m)" >&2; exit 1 ;;
           esac
           sudo install -m 0755 "minisign-linux/${minisign_arch}/minisign" /usr/local/bin/minisign
-          minisign -V
+          minisign -v
 
       - name: Install GoReleaser
         uses: goreleaser/goreleaser-action@v6

@@ -31,13 +31,14 @@ jobs:
       - name: Install minisign
         run: |
           set -euo pipefail
-          curl -fsSL "https://github.com/jedisct1/minisign/releases/download/0.12/minisign-0.12-linux.tar.gz" | tar xz
+          tmp=$(mktemp -d)
+          curl -fsSL "https://github.com/jedisct1/minisign/releases/download/0.12/minisign-0.12-linux.tar.gz" | tar xzf - -C "$tmp"
           case "$(uname -m)" in
             x86_64) minisign_arch=x86_64 ;;
             aarch64|arm64) minisign_arch=aarch64 ;;
             *) echo "unsupported runner arch: $(uname -m)" >&2; exit 1 ;;
           esac
-          sudo install -m 0755 "minisign-linux/${minisign_arch}/minisign" /usr/local/bin/minisign
+          sudo install -m 0755 "$tmp/minisign-linux/${minisign_arch}/minisign" /usr/local/bin/minisign
           minisign -v
 
       - name: Install GoReleaser

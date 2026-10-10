@@ -44,13 +44,11 @@ checksum:
 signs:
   - cmd: bash
     signature: "${artifact}.minisig"
-    env:
-      - MINISIGN_KEY_FILE={{ .Env.MINISIGN_KEY_FILE }}
     args:
       - -ceu
       - |
         if [ -z "${MINISIGN_KEY_FILE:-}" ] || [ ! -f "${MINISIGN_KEY_FILE}" ]; then
-          echo "MINISIGN_KEY_FILE not set (configure MINISIGN_SECRET_KEY in CI)" >&2
+          echo "MINISIGN_KEY_FILE not set (Prepare minisign key step / MINISIGN_SECRET_KEY secret)" >&2
           exit 1
         fi
         minisign -S -s "${MINISIGN_KEY_FILE}" -x "${signature}" -m "${artifact}"

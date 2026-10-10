@@ -6,7 +6,8 @@ export type SettingsSection =
   | "grid"
   | "safety"
   | "privacy"
-  | "shortcuts";
+  | "shortcuts"
+  | "about";
 
 export type SettingsPaneProps = {
   doc: WispSettings;
@@ -20,4 +21,5 @@ export const SETTINGS_SECTIONS: { id: SettingsSection; label: string }[] = [
   { id: "safety", label: "Data safety" },
   { id: "privacy", label: "Privacy" },
   { id: "shortcuts", label: "Shortcuts" },
+  { id: "about", label: "About & feedback" },
 ];

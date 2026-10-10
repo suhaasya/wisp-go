@@ -14,3 +14,7 @@ make dev   # Vite dev server + go run ./cmd/wisp -dev
 ```
 
 See [AGENTS.md](AGENTS.md) and [docs/PRD.md](docs/PRD.md) for architecture and rules.
+
+End users: [docs/user/README.md](docs/user/README.md) · Landing page: [website/index.html](website/index.html)
+
+Licensed under the [Apache License 2.0](LICENSE).

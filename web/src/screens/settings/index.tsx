@@ -14,6 +14,7 @@ import { EditorPane } from "./editor";
 import { GridPane } from "./grid";
 import { PrivacyPane } from "./privacy";
 import { SafetyPane } from "./safety";
+import { AboutPane } from "./about";
 import { ShortcutsPane } from "./shortcuts";
 import { SETTINGS_SECTIONS, type SettingsSection } from "./types";
 
@@ -81,6 +82,9 @@ export function SettingsScreen() {
       break;
     case "shortcuts":
       pane = <ShortcutsPane doc={doc} onPatch={onPatch} />;
+      break;
+    case "about":
+      pane = <AboutPane />;
       break;
   }
 

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wisp — local database client</title>
+    <meta
+      name="description"
+      content="PostgreSQL, MySQL and MariaDB. One small Go binary on localhost; the UI in your browser. Memory budgets are a feature."
+    />
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f4f3f0;
+        --panel: #fff;
+        --ink: #1a1917;
+        --muted: #5c5a54;
+        --line: #ddd9d0;
+        --accent: #2563eb;
+        --accent-soft: #dbeafe;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #141312;
+          --panel: #1e1d1b;
+          --ink: #eceae4;
+          --muted: #a8a59c;
+          --line: #3a3834;
+          --accent: #60a5fa;
+          --accent-soft: #1e3a5f;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        line-height: 1.5;
+      }
+      a {
+        color: var(--accent);
+      }
+      .wrap {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 4rem;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 2.5rem;
+      }
+      h1 {
+        font-size: clamp(2rem, 5vw, 2.75rem);
+        letter-spacing: -0.03em;
+        margin: 0 0 0.5rem;
+      }
+      .lead {
+        font-size: 1.125rem;
+        color: var(--muted);
+        max-width: 36rem;
+        margin: 0 auto;
+      }
+      .cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+        margin-top: 1.5rem;
+      }
+      .btn {
+        display: inline-block;
+        padding: 0.65rem 1.1rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid var(--line);
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+        border-color: transparent;
+      }
+      .btn-secondary {
+        background: var(--panel);
+        color: var(--ink);
+      }
+      section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.25rem;
+      }
+      h2 {
+        font-size: 1.125rem;
+        margin: 0 0 1rem;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 0.45rem 0.5rem;
+        border-bottom: 1px solid var(--line);
+      }
+      th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+      code {
+        font-size: 0.85em;
+        background: var(--bg);
+        padding: 0.15rem 0.35rem;
+        border-radius: 4px;
+      }
+      pre {
+        overflow-x: auto;
+        background: var(--bg);
+        padding: 1rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+      }
+      .preview {
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        overflow: hidden;
+        height: 280px;
+      }
+      .preview iframe {
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.875rem;
+        margin-top: 2rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>Wisp</h1>
+        <p class="lead">
+          A local client for PostgreSQL, MySQL and MariaDB. One Go process on <code>127.0.0.1</code>; the UI in your
+          browser. No Electron, no cloud account.
+        </p>
+        <div class="cta">
+          <a class="btn btn-primary" href="https://github.com/suhaasya/wisp-go/releases/latest">Download</a>
+          <a
+            class="btn btn-secondary"
+            href="https://github.com/suhaasya/wisp-go/blob/main/docs/user/README.md"
+            >User guide</a
+          >
+          <a class="btn btn-secondary" href="https://github.com/suhaasya/wisp-go/issues/new">Feedback</a>
+        </div>
+      </header>
+
+      <section aria-labelledby="budgets-go">
+        <h2 id="budgets-go">Go process budgets</h2>
+        <p style="color: var(--muted); font-size: 0.9rem; margin-top: 0">
+          Targets are goals; deal breakers block release (see AGENTS.md).
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Target</th>
+              <th>Deal breaker</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Binary (embedded UI)</td>
+              <td>≤ 15 MB</td>
+              <td>25 MB</td>
+            </tr>
+            <tr>
+              <td>Download (compressed)</td>
+              <td>≤ 7 MB</td>
+              <td>10 MB</td>
+            </tr>
+            <tr>
+              <td>RSS idle, one tab</td>
+              <td>≤ 20 MB</td>
+              <td>30 MB</td>
+            </tr>
+            <tr>
+              <td>RSS, 1 conn + 500-table schema</td>
+              <td>≤ 30 MB</td>
+              <td>45 MB</td>
+            </tr>
+            <tr>
+              <td>RSS per extra connection</td>
+              <td>≤ 2 MB</td>
+              <td>4 MB</td>
+            </tr>
+            <tr>
+              <td>RSS, 1M-row table scrolled</td>
+              <td>≤ 50 MB</td>
+              <td>80 MB</td>
+            </tr>
+            <tr>
+              <td>Start to page served</td>
+              <td>≤ 100 ms</td>
+              <td>300 ms</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section aria-labelledby="budgets-tab">
+        <h2 id="budgets-tab">Browser tab budgets</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Metric</th>
+              <th>Target</th>
+              <th>Deal breaker</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>JS heap, idle</td>
+              <td>≤ 5 MB</td>
+              <td>10 MB</td>
+            </tr>
+            <tr>
+              <td>JS heap, 1M-row scroll</td>
+              <td>≤ 10 MB</td>
+              <td>20 MB</td>
+            </tr>
+            <tr>
+              <td>DOM nodes</td>
+              <td>≤ 2,000</td>
+              <td>4,000</td>
+            </tr>
+            <tr>
+              <td>Initial JS (gzip)</td>
+              <td>≤ 60 KB</td>
+              <td>100 KB</td>
+            </tr>
+            <tr>
+              <td>SQL editor chunk (gzip)</td>
+              <td>≤ 200 KB</td>
+              <td>280 KB</td>
+            </tr>
+            <tr>
+              <td>CSS (gzip)</td>
+              <td>≤ 15 KB</td>
+              <td>25 KB</td>
+            </tr>
+            <tr>
+              <td>Whole tab (Chrome)</td>
+              <td>≤ 40 MB</td>
+              <td>70 MB</td>
+            </tr>
+            <tr>
+              <td>Long tasks while scrolling</td>
+              <td>&lt; 50 ms</td>
+              <td>&gt; 100 ms</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section aria-labelledby="install">
+        <h2 id="install">Install</h2>
+        <pre><code>curl -fsSL https://raw.githubusercontent.com/suhaasya/wisp-go/main/scripts/install.sh | sh
+wisp</code></pre>
+        <p style="font-size: 0.9rem; color: var(--muted)">
+          Windows: PowerShell install script in
+          <a href="https://github.com/suhaasya/wisp-go/blob/main/docs/release.md">docs/release.md</a>. Updates:
+          <code>wisp --update</code>.
+        </p>
+      </section>
+
+      <section aria-labelledby="preview">
+        <h2 id="preview">UI preview</h2>
+        <p style="font-size: 0.9rem; color: var(--muted)">
+          Release announcements include screenshots from a running build. Reference layout (design mockup):
+        </p>
+        <div class="preview">
+          <iframe
+            title="Wisp design mockup"
+            src="https://raw.githubusercontent.com/suhaasya/wisp-go/main/design/wisp-design-mockup.html"
+            loading="lazy"
+          ></iframe>
+        </div>
+      </section>
+
+      <footer>
+        <p>
+          Source:
+          <a href="https://github.com/suhaasya/wisp-go">github.com/suhaasya/wisp-go</a>
+          · Licensed under
+          <a href="https://www.apache.org/licenses/LICENSE-2.0">Apache 2.0</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

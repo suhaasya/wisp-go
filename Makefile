@@ -13,6 +13,7 @@ build: web
 
 test: web
 	go test ./...
+	node --test tools/check-website.test.mjs tools/check-user-docs.test.mjs
 	npm --prefix web test
 
 lint:

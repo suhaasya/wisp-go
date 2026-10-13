@@ -140,6 +140,64 @@ func TestQueryTypesRoundTrip(t *testing.T) {
 	}
 }
 
+func TestQueryMultipleTimestampsAndText(t *testing.T) {
+	conn := openConn(t, 0)
+	rows, err := conn.Query(t.Context(), `SELECT now()::timestamp, (now() + interval '1 hour')::timestamp, 'alpha'::text, 'beta'::text`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	w, err := rows.NextWindow(10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w == nil || w.Rows != 1 {
+		t.Fatalf("window rows = %v", w)
+	}
+	if got, ok := w.CellText(0, 0); !ok || got == "" {
+		t.Fatalf("first timestamp empty ok=%v", ok)
+	}
+	if got, ok := w.CellText(1, 0); !ok || got == "" {
+		t.Fatalf("second timestamp empty ok=%v got=%q", ok, got)
+	}
+	if got, ok := w.CellText(2, 0); !ok || got != "alpha" {
+		t.Fatalf("first text = %q ok=%v", got, ok)
+	}
+	if got, ok := w.CellText(3, 0); !ok || got != "beta" {
+		t.Fatalf("second text = %q ok=%v", got, ok)
+	}
+}
+
+func TestQueryMultipleTextColumns(t *testing.T) {
+	conn := openConn(t, 0)
+	rows, err := conn.Query(t.Context(), `SELECT 1::int4, 'akshay@phiedge.co.in'::varchar, 'Akshay'::varchar, 'Smith'::varchar`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+
+	w, err := rows.NextWindow(10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if w == nil || w.Rows != 1 {
+		t.Fatalf("window rows = %v", w)
+	}
+	if got, ok := w.CellInt(0, 0); !ok || got != 1 {
+		t.Fatalf("id = %d ok=%v", got, ok)
+	}
+	if got, ok := w.CellText(1, 0); !ok || got != "akshay@phiedge.co.in" {
+		t.Fatalf("official_email = %q ok=%v", got, ok)
+	}
+	if got, ok := w.CellText(2, 0); !ok || got != "Akshay" {
+		t.Fatalf("first_name = %q ok=%v", got, ok)
+	}
+	if got, ok := w.CellText(3, 0); !ok || got != "Smith" {
+		t.Fatalf("last_name = %q ok=%v", got, ok)
+	}
+}
+
 func TestCancelPgSleep(t *testing.T) {
 	conn := openConn(t, 0)
 	ctx, cancel := context.WithCancel(t.Context())

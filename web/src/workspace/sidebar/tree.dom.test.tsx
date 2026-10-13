@@ -49,4 +49,46 @@ describe("SchemaTree DOM budget", () => {
     const allNodes = container.querySelectorAll("*");
     expect(allNodes.length).toBeLessThan(2000);
   });
+
+  it("loads every expanded group when more than one is open on first mount", async () => {
+    const fetchObjectsImpl = vi.fn(async (_sid: string, _schema: string, kind: ObjectKind) => {
+      if (kind === "table") {
+        return ["user"];
+      }
+      if (kind === "sequence") {
+        return [];
+      }
+      return [];
+    });
+
+    const expanded = {
+      tables: true,
+      views: false,
+      functions: false,
+      sequences: true,
+      types: false,
+    };
+
+    const { container } = render(
+      <SchemaTree
+        sessionId="s1"
+        schema="public"
+        filterQuery=""
+        expanded={expanded}
+        onExpandedChange={() => {}}
+        selectedObject={null}
+        onSelectObject={() => {}}
+        onOpenTable={() => {}}
+        fetchObjectsImpl={fetchObjectsImpl}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(container.querySelector('[data-object-row="user"]')).toBeTruthy();
+    });
+
+    expect(container.textContent).not.toContain("Loading…");
+    expect(fetchObjectsImpl).toHaveBeenCalledWith("s1", "public", "table", expect.any(Object));
+    expect(fetchObjectsImpl).toHaveBeenCalledWith("s1", "public", "sequence", expect.any(Object));
+  });
 });

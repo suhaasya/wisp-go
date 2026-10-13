@@ -36,19 +36,31 @@ func (s *Session) CompletionSchema(ctx context.Context, schema string, extraTabl
 	if schema == "" {
 		return CompletionSchemaResponse{}, errCompletionSchemaRequired
 	}
-	tables, err := s.ListObjects(ctx, schema, driver.ObjectKindTable, false)
-	if err != nil {
-		return CompletionSchemaResponse{}, err
+	if len(extraTables) == 0 {
+		tables, err := s.ListObjects(ctx, schema, driver.ObjectKindTable, false)
+		if err != nil {
+			return CompletionSchemaResponse{}, err
+		}
+		views, err := s.ListObjects(ctx, schema, driver.ObjectKindView, false)
+		if err != nil {
+			return CompletionSchemaResponse{}, err
+		}
+		names := mergeObjectNames(tables, views, nil)
+		if len(names) > maxCompletionTables {
+			names = names[:maxCompletionTables]
+		}
+		out := CompletionSchemaResponse{Schema: schema, Tables: make([]CompletionTable, 0, len(names))}
+		for _, name := range names {
+			out.Tables = append(out.Tables, CompletionTable{Name: name, Columns: []CompletionColumn{}})
+		}
+		return out, nil
 	}
-	views, err := s.ListObjects(ctx, schema, driver.ObjectKindView, false)
-	if err != nil {
-		return CompletionSchemaResponse{}, err
-	}
-	names := mergeObjectNames(tables, views, extraTables)
+
+	names := mergeObjectNames(nil, nil, extraTables)
 	if len(names) > maxCompletionTables {
 		names = names[:maxCompletionTables]
 	}
-	out := CompletionSchemaResponse{Schema: schema}
+	out := CompletionSchemaResponse{Schema: schema, Tables: []CompletionTable{}}
 	for _, name := range names {
 		det, err := s.TableMetadata(ctx, schema, name, false)
 		if err != nil {

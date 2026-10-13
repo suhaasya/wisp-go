@@ -134,7 +134,7 @@ export function SchemaTree({
     sequences: "idle",
     types: "idle",
   });
-  const abortRef = useRef<AbortController | null>(null);
+  const abortByGroupRef = useRef<Partial<Record<SchemaGroupId, AbortController>>>({});
   const [menu, setMenu] = useState<{
     x: number;
     y: number;
@@ -146,9 +146,9 @@ export function SchemaTree({
       if (!group || !schema) {
         return;
       }
-      abortRef.current?.abort();
+      abortByGroupRef.current[groupId]?.abort();
       const ac = new AbortController();
-      abortRef.current = ac;
+      abortByGroupRef.current[groupId] = ac;
       setLoad((prev) => ({ ...prev, [groupId]: "loading" }));
       try {
         const chunks = await Promise.all(
@@ -156,6 +156,9 @@ export function SchemaTree({
             fetchObjectsImpl(sessionId, schema, kind, { refresh, signal: ac.signal }),
           ),
         );
+        if (ac.signal.aborted) {
+          return;
+        }
         const merged = [...new Set(chunks.flat())].sort((a, b) => a.localeCompare(b));
         setNamesByGroup((prev) => ({ ...prev, [groupId]: merged }));
         setLoad((prev) => ({ ...prev, [groupId]: "ready" }));
@@ -170,10 +173,17 @@ export function SchemaTree({
   );
 
   useEffect(() => {
-    return () => abortRef.current?.abort();
+    return () => {
+      for (const ac of Object.values(abortByGroupRef.current)) {
+        ac?.abort();
+      }
+    };
   }, []);
 
   useEffect(() => {
+    for (const ac of Object.values(abortByGroupRef.current)) {
+      ac?.abort();
+    }
     setNamesByGroup({ tables: [], views: [], functions: [], sequences: [], types: [] });
     setLoad({ tables: "idle", views: "idle", functions: "idle", sequences: "idle", types: "idle" });
     for (const group of SCHEMA_GROUPS) {

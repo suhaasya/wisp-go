@@ -88,6 +88,7 @@ export function Grid(props: GridProps) {
 
     const rowHeight = rowHeightFromSettings();
     const tableName = `${props.schema}.${props.table}`;
+    columns.value = buildColumns(props.columns);
 
     let pool: RowPool | null = null;
     let editorCleanup: (() => void) | null = null;
@@ -125,7 +126,7 @@ export function Grid(props: GridProps) {
         header.setColumns(columns.value);
         pool?.setColumns(columns.value);
       },
-    });
+    }, Math.max(scrollEl.clientWidth, 1));
 
     bufferRef.current = createWindowBuffer({
       windowRows: DEFAULT_WINDOW_ROWS,
@@ -195,7 +196,7 @@ export function Grid(props: GridProps) {
       bodyEl: bodyMount,
       spacerEl,
       rowHeight,
-      totalRows,
+      totalRows: props.total.value,
       total: props.total,
       buffer,
       columns: columns.value,
@@ -248,6 +249,10 @@ export function Grid(props: GridProps) {
     }
 
     scrollEl.addEventListener("scroll", onScroll, { passive: true });
+    const resizeObserver = new ResizeObserver(() => {
+      pool?.scheduleLayout();
+    });
+    resizeObserver.observe(scrollEl);
     onScroll();
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -304,6 +309,7 @@ export function Grid(props: GridProps) {
     hostRef.current?.addEventListener("contextmenu", onContextMenu);
 
     return () => {
+      resizeObserver.disconnect();
       scrollEl.removeEventListener("scroll", onScroll);
       hostRef.current?.removeEventListener("keydown", onKeyDown);
       hostRef.current?.removeEventListener("contextmenu", onContextMenu);
@@ -326,6 +332,8 @@ export function Grid(props: GridProps) {
     props.editable,
     props.primaryKey,
     props.onStagedCount,
+    props.columns,
+    props.total,
   ]);
 
   const totalLabel =

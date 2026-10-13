@@ -23,7 +23,12 @@ type Static struct {
 
 // NewStatic returns a Static handler for production or dev.
 func NewStatic(assetFS fs.FS, dev bool) (*Static, error) {
-	u, err := url.Parse(viteDevOrigin)
+	return NewStaticWithVite(assetFS, dev, viteDevOrigin)
+}
+
+// NewStaticWithVite is like NewStatic but uses a custom Vite origin (tests).
+func NewStaticWithVite(assetFS fs.FS, dev bool, viteOrigin string) (*Static, error) {
+	u, err := url.Parse(viteOrigin)
 	if err != nil {
 		return nil, err
 	}
@@ -41,11 +46,30 @@ func (s *Static) Register(mux *http.ServeMux) {
 			}
 			http.Error(w, "Dev UI unavailable. Run make dev (Vite on :5173) or make web.", http.StatusBadGateway)
 		}
-		mux.Handle("/", proxy)
+		mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if s.hasEmbeddedAsset(r.URL.Path) {
+				s.serveAsset(w, r)
+				return
+			}
+			proxy.ServeHTTP(w, r)
+		}))
 		return
 	}
 	mux.Handle("/assets/", http.HandlerFunc(s.serveAsset))
 	mux.HandleFunc("/", s.serveIndex)
+}
+
+func (s *Static) hasEmbeddedAsset(urlPath string) bool {
+	if s.FS == nil || !strings.HasPrefix(urlPath, "/assets/") {
+		return false
+	}
+	name := strings.TrimPrefix(urlPath, "/")
+	name = path.Clean(name)
+	if !strings.HasPrefix(name, "assets/") {
+		return false
+	}
+	_, err := fs.Stat(s.FS, name)
+	return err == nil
 }
 
 func (s *Static) serveAsset(w http.ResponseWriter, r *http.Request) {

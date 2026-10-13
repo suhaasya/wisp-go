@@ -35,6 +35,25 @@ func (m *Manager) newQueryFetcher(ctx context.Context, src Source) (fetcher, Tot
 	return f, total, nil
 }
 
+// updateQueryTotalAfterFetch adjusts row count for ad-hoc queries (unknown until rows are read).
+func updateQueryTotalAfterFetch(r *result, offset, rows, limit int) {
+	if r.source.Kind != SourceQuery {
+		return
+	}
+	end := int64(offset + rows)
+	if rows < limit {
+		r.total = Total{Kind: "exact", Value: end}
+		return
+	}
+	if r.total.Kind == "exact" {
+		return
+	}
+	next := end + 1
+	if r.total.Value < next {
+		r.total = Total{Kind: "estimate", Value: next}
+	}
+}
+
 func stringsTrim(s string) string {
 	return strings.TrimSpace(s)
 }
@@ -47,7 +66,9 @@ func (f *queryFetcher) Columns() []driver.ColumnMeta {
 
 func (f *queryFetcher) Close() error {
 	if f.rows != nil {
-		return f.rows.Close()
+		err := f.rows.Close()
+		f.rows = nil
+		return err
 	}
 	return nil
 }

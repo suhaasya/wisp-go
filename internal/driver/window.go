@@ -45,8 +45,10 @@ func (w *Window) bindColumnData(meta ColumnMeta, rows int, textSlot *int) column
 		cd.bools = make([]bool, rows)
 	case colText:
 		cd.offsetOff = *textSlot
-		cd.offsetLen = rows + 1
-		*textSlot += rows + 1
+		if rows > 0 {
+			cd.offsetLen = 2 * rows
+			*textSlot += 2 * rows
+		}
 	}
 	return cd
 }
@@ -124,11 +126,11 @@ func GrowWindow(w *Window, extra int) *Window {
 		case colBool:
 			copy(dst.data.bools[:w.Rows], src.bools)
 		case colText:
-			// offsets copied above for first w.Rows text slots
 			if w.Rows > 0 {
+				n := 2 * w.Rows
 				offSrc := src.offsetOff
 				offDst := dst.data.offsetOff
-				copy(out.textOffsets[offDst:offDst+w.Rows+1], w.textOffsets[offSrc:offSrc+w.Rows+1])
+				copy(out.textOffsets[offDst:offDst+n], w.textOffsets[offSrc:offSrc+n])
 			}
 		}
 	}
@@ -171,8 +173,8 @@ func NewWindow(cols []ColumnMeta, rows int) *Window {
 			textCols++
 		}
 	}
-	if textCols > 0 {
-		w.textOffsets = make([]int, textCols*(rows+1))
+	if textCols > 0 && rows > 0 {
+		w.textOffsets = make([]int, textCols*2*rows)
 		if rows > 0 {
 			w.arena = make([]byte, 0, textCols*rows*32)
 		}
@@ -293,9 +295,24 @@ func (w *Window) CellText(col, row int) (string, bool) {
 	if isNullRow(cd.nulls, row) {
 		return "", false
 	}
-	off := w.textOffsets[cd.offsetOff : cd.offsetOff+cd.offsetLen]
-	start, end := off[row], off[row+1]
+	start, end, ok := textCellBounds(w.textOffsets, cd.offsetOff, cd.offsetLen, row)
+	if !ok || start > end || end > len(w.arena) {
+		return "", false
+	}
 	return string(w.arena[start:end]), true
+}
+
+func textCellBounds(textOffsets []int, offsetOff, offsetLen, row int) (start, end int, ok bool) {
+	if offsetLen < 2 || row < 0 {
+		return 0, 0, false
+	}
+	half := offsetLen / 2
+	if row >= half {
+		return 0, 0, false
+	}
+	start = textOffsets[offsetOff+row]
+	end = textOffsets[offsetOff+half+row]
+	return start, end, true
 }
 
 func isNullRow(nulls []int, row int) bool {
@@ -325,16 +342,12 @@ func (b *ColumnBuilder) SetText(row int, s string) {
 
 func (b *ColumnBuilder) SetNull(row int) {
 	b.data.nulls = appendUniqueInt(b.data.nulls, row)
-	if b.data.kind == colText {
-		off := b.textOffsets()
-		if row+1 < len(off) && off[row+1] == 0 {
-			off[row+1] = off[row]
-		}
-	}
 }
 
-func (b *ColumnBuilder) textOffsets() []int {
-	return b.w.textOffsets[b.data.offsetOff : b.data.offsetOff+b.data.offsetLen]
+func (b *ColumnBuilder) textRowOffsets() (starts, ends []int) {
+	half := b.data.offsetLen / 2
+	base := b.data.offsetOff
+	return b.w.textOffsets[base : base+half], b.w.textOffsets[base+half : base+b.data.offsetLen]
 }
 
 func (b *ColumnBuilder) appendText(row int, s string) {
@@ -345,9 +358,12 @@ func (b *ColumnBuilder) appendText(row int, s string) {
 	}
 	start := len(b.w.arena)
 	b.w.arena = append(b.w.arena, s...)
-	off := b.textOffsets()
-	off[row] = start
-	off[row+1] = len(b.w.arena)
+	starts, ends := b.textRowOffsets()
+	if row < 0 || row >= len(starts) {
+		return
+	}
+	starts[row] = start
+	ends[row] = len(b.w.arena)
 	if truncated {
 		b.data.truncated = appendUniqueInt(b.data.truncated, row)
 	}
@@ -445,17 +461,12 @@ func writeColumnValuesJSON(buf *bytes.Buffer, arena []byte, textOffsets []int, c
 		if rows == 0 || col.offsetLen == 0 {
 			break
 		}
-		end := col.offsetOff + col.offsetLen
-		if end > len(textOffsets) {
-			break
-		}
-		off := textOffsets[col.offsetOff:end]
 		for r := 0; r < rows; r++ {
 			if r > 0 {
 				buf.WriteByte(',')
 			}
-			start, end := off[r], off[r+1]
-			if start > end || end > len(arena) {
+			start, end, ok := textCellBounds(textOffsets, col.offsetOff, col.offsetLen, r)
+			if !ok || start > end || end > len(arena) {
 				writeJSONString(buf, nil)
 				continue
 			}

@@ -106,7 +106,8 @@ func connConfig(p driver.ConnectParams, useTLS bool) (*pgx.ConnConfig, error) {
 			return dial(ctx, network, addr)
 		}
 	}
-	cfg.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+	// Extended protocol: correct multi-column text decoding (simple protocol can yield empty trailing columns).
+	cfg.DefaultQueryExecMode = pgx.QueryExecModeCacheDescribe
 	return cfg, nil
 }
 
@@ -223,9 +224,24 @@ func (r *pgRows) NextWindow(max int) (*driver.Window, error) {
 			w.Rows = n
 			return w, err
 		}
-		raw := r.rows.RawValues()
-		for i, fd := range r.fields {
-			decodeIntoColumn(w.Column(i), fd.DataTypeOID, raw[i], n)
+		vals, err := r.rows.Values()
+		if err != nil {
+			if n == 0 {
+				return nil, err
+			}
+			w.Rows = n
+			return w, err
+		}
+		if len(vals) != len(r.fields) {
+			err := fmt.Errorf("postgres: column count mismatch")
+			if n == 0 {
+				return nil, err
+			}
+			w.Rows = n
+			return w, err
+		}
+		for i, v := range vals {
+			decodeFromValue(w.Column(i), v, n)
 		}
 		n++
 	}

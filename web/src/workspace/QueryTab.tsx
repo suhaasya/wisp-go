@@ -3,8 +3,8 @@ import { onQueryEvent } from "../editor/query-events";
 import { onSchemaInvalidated } from "../editor/schema-events";
 import {
   mergeCompletionSchema,
-  missingTableNames,
   referencedTableNames,
+  tablesNeedingColumnHydration,
   type CompletionSchemaDTO,
 } from "../editor/complete";
 import { registerQueryKeyRunners } from "../keydispatch";
@@ -46,6 +46,7 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
   } | null>(null);
   const schemaDataRef = useRef<CompletionSchemaDTO>({ schema: "public", tables: [] });
   const hydrateTimerRef = useRef<number | null>(null);
+  const completeAbortRef = useRef<AbortController | null>(null);
 
   const [running, setRunning] = useState(false);
   const [activeQid, setActiveQid] = useState<string | null>(null);
@@ -62,6 +63,7 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
   const [snippetName, setSnippetName] = useState("");
   const pendingRunRef = useRef<RunBody | null>(null);
   const lastRunBodyRef = useRef<RunBody | null>(null);
+  const activeQidRef = useRef<string | null>(null);
   const resultCounterRef = useRef(0);
 
   const startRun = useCallback(
@@ -71,9 +73,11 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
       setRunning(true);
       void postRun(sessionId, body)
         .then(({ qid }) => {
+          activeQidRef.current = qid;
           setActiveQid(qid);
         })
         .catch(() => {
+          activeQidRef.current = null;
           setRunning(false);
         });
     },
@@ -174,13 +178,20 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
     const schema = activeSchemaName(profileId);
 
     const loadSchema = (extra?: string[]) => {
-      void fetchCompletionSchema(sessionId, schema, extra).then((data) => {
-        if (cancelled) {
-          return;
-        }
-        schemaDataRef.current = mergeCompletionSchema(schemaDataRef.current, data);
-        handleRef.current?.setCompletionSchema(schemaDataRef.current);
-      });
+      completeAbortRef.current?.abort();
+      const ac = new AbortController();
+      completeAbortRef.current = ac;
+      void fetchCompletionSchema(sessionId, schema, extra, ac.signal)
+        .then((data) => {
+          if (cancelled || ac.signal.aborted) {
+            return;
+          }
+          schemaDataRef.current = mergeCompletionSchema(schemaDataRef.current, data);
+          handleRef.current?.setCompletionSchema(schemaDataRef.current);
+        })
+        .catch(() => {
+          /* aborted or offline */
+        });
     };
 
     void import("../editor/index").then(({ mountSqlEditor }) => {
@@ -217,8 +228,10 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
               }
               hydrateTimerRef.current = window.setTimeout(() => {
                 hydrateTimerRef.current = null;
-                const loaded = new Set(schemaDataRef.current.tables.map((t) => t.name));
-                const need = missingTableNames(loaded, referencedTableNames(value));
+                const need = tablesNeedingColumnHydration(
+                  schemaDataRef.current.tables,
+                  referencedTableNames(value),
+                );
                 if (need.length > 0) {
                   loadSchema(need);
                 }
@@ -245,6 +258,8 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
       if (hydrateTimerRef.current !== null) {
         window.clearTimeout(hydrateTimerRef.current);
       }
+      completeAbortRef.current?.abort();
+      completeAbortRef.current = null;
       handleRef.current?.destroy();
       handleRef.current = null;
       if (hostRef.current) {
@@ -258,7 +273,8 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
       if (ev.sid !== sessionId) {
         return;
       }
-      if (ev.qid && ev.qid === activeQid) {
+      const qid = activeQidRef.current;
+      if (ev.qid && qid && ev.qid === qid) {
         if (ev.rid) {
           resultCounterRef.current += 1;
           const n = resultCounterRef.current;
@@ -301,12 +317,13 @@ export function QueryTab({ sessionId, tab }: { sessionId: string; tab: QueryTab 
         }
         if (ev.done) {
           setRunning(false);
+          activeQidRef.current = null;
           setActiveQid(null);
         }
       }
     });
     return off;
-  }, [sessionId, activeQid]);
+  }, [sessionId]);
 
   const activeResult = panelTabs.find(
     (t): t is Extract<QueryPanelTab, { kind: "result" }> =>

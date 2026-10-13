@@ -15,6 +15,12 @@ export default defineConfig({
     host: "127.0.0.1",
     port: 5173,
     strictPort: true,
+    // Page is opened on WISP_DEV_PORT (8787) via Go reverse proxy; HMR must use Vite's port.
+    hmr: {
+      host: "127.0.0.1",
+      port: 5173,
+      clientPort: 5173,
+    },
     proxy: {
       "/api": { target: wispDevOrigin, changeOrigin: true },
       "/auth": { target: wispDevOrigin, changeOrigin: true },

@@ -164,7 +164,11 @@ func (m *Manager) WindowJSON(ctx context.Context, rid string, offset, limit int)
 		w = driver.NewWindow(r.columns, 0)
 	}
 	r.cache.put(offset, limit, w)
-	return m.encodeWindow(r.id, offset, r.total, w, m.overlay)
+	m.mu.Lock()
+	updateQueryTotalAfterFetch(r, offset, w.Rows, limit)
+	total := r.total
+	m.mu.Unlock()
+	return m.encodeWindow(r.id, offset, total, w, m.overlay)
 }
 
 func (m *Manager) encodeWindow(rid string, offset int, total Total, raw *driver.Window, overlayFn func(string, *driver.Window, int) Overlay) ([]byte, error) {
@@ -185,6 +189,17 @@ func (m *Manager) ResultMeta(rid string) (Source, []driver.ColumnMeta, error) {
 	cols := make([]driver.ColumnMeta, len(r.columns))
 	copy(cols, r.columns)
 	return src, cols, nil
+}
+
+// ReleaseFetchCursor closes an open server-side row cursor but keeps cached windows.
+func (m *Manager) ReleaseFetchCursor(rid string) {
+	m.mu.Lock()
+	r, ok := m.results[rid]
+	m.mu.Unlock()
+	if !ok || r.fetch == nil {
+		return
+	}
+	_ = r.fetch.Close()
 }
 
 // Close removes one result.

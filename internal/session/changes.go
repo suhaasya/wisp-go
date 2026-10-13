@@ -56,6 +56,11 @@ func (s *Session) wirePagerOverlay() {
 }
 
 func (s *Session) resultOverlay(rid string, w *driver.Window, offset int) pager.Overlay {
+	if p := s.pagerForRID(rid); p != nil {
+		if src, _, err := p.ResultMeta(rid); err == nil && src.Kind == pager.SourceQuery {
+			return pager.Overlay{}
+		}
+	}
 	rc, ok := s.resultChangesFor(rid)
 	if !ok || rc == nil || rc.cs == nil || w == nil {
 		return pager.Overlay{}

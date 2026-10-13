@@ -17,16 +17,15 @@ export type SnippetCompletionDTO = {
 };
 
 export function toSQLNamespace(data: CompletionSchemaDTO): SQLNamespace {
+  const normalized = normalizeCompletionSchema(data);
   const out: Record<string, SQLNamespace> = {};
-  for (const table of data.tables) {
-    const cols: Record<string, Completion> = {};
-    for (const col of table.columns) {
-      cols[col.name] = {
-        label: col.name,
-        type: "property",
-        detail: col.type,
-      };
-    }
+  for (const table of normalized.tables) {
+    const columns = Array.isArray(table.columns) ? table.columns : [];
+    const cols: Completion[] = columns.map((col) => ({
+      label: col.name,
+      type: "property",
+      detail: col.type,
+    }));
     out[table.name] = cols as unknown as SQLNamespace;
   }
   return out as SQLNamespace;
@@ -40,9 +39,12 @@ export function mergeSnippetsIntoNamespace(
   for (const sn of snippets) {
     const tag = sn.tags?.length ? sn.tags.join(", ") : "snippet";
     out[sn.name] = {
-      label: sn.name,
-      type: "keyword",
-      detail: tag,
+      self: {
+        label: sn.name,
+        type: "keyword",
+        detail: tag,
+      },
+      children: {},
     } as unknown as SQLNamespace;
   }
   return out as SQLNamespace;
@@ -70,14 +72,39 @@ export function missingTableNames(loaded: Set<string>, referenced: string[]): st
   return referenced.filter((t) => !loaded.has(t));
 }
 
+/** Tables referenced in SQL that still need column metadata for autocomplete. */
+export function tablesNeedingColumnHydration(
+  tables: CompletionTableDTO[],
+  referenced: string[],
+): string[] {
+  const byName = new Map(tables.map((t) => [t.name, t]));
+  const out: string[] = [];
+  for (const name of referenced) {
+    const row = byName.get(name);
+    if (!row || row.columns.length === 0) {
+      out.push(name);
+    }
+  }
+  return out;
+}
+
+export function normalizeCompletionSchema(
+  data: Partial<CompletionSchemaDTO> | null | undefined,
+): CompletionSchemaDTO {
+  const tables = Array.isArray(data?.tables) ? data.tables : [];
+  return { schema: data?.schema ?? "", tables };
+}
+
 export function mergeCompletionSchema(
   current: CompletionSchemaDTO,
   patch: CompletionSchemaDTO,
 ): CompletionSchemaDTO {
-  const byName = new Map(current.tables.map((t) => [t.name, t]));
-  for (const t of patch.tables) {
+  const base = normalizeCompletionSchema(current);
+  const delta = normalizeCompletionSchema(patch);
+  const byName = new Map(base.tables.map((t) => [t.name, t]));
+  for (const t of delta.tables) {
     byName.set(t.name, t);
   }
   const tables = [...byName.values()].sort((a, b) => a.name.localeCompare(b.name));
-  return { schema: current.schema || patch.schema, tables };
+  return { schema: base.schema || delta.schema, tables };
 }

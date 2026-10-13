@@ -228,6 +228,7 @@ func (s *Session) runOneStatement(ctx context.Context, qid string, confirm bool,
 	cls := ClassifyStatement(st.text)
 	if cls == StatementRead {
 		schema, table, keys := s.queryResultSource(ctx, st.text)
+		s.releaseQueryRunRowCursors()
 		open, err := s.OpenResult(ctx, pager.Source{
 			Kind:       pager.SourceQuery,
 			SQL:        st.text,
@@ -278,6 +279,17 @@ func (s *Session) recordHistory(sql string, ev QueryRunEvent) {
 		status = "cancelled"
 	}
 	s.onHistoryRecord(sql, ev.DurationMs, ev.RowsAffected, status)
+}
+
+func (s *Session) releaseQueryRunRowCursors() {
+	s.runMu.Lock()
+	rids := append([]string(nil), s.queryRunRIDs...)
+	s.runMu.Unlock()
+	if p := s.ensurePager(); p != nil {
+		for _, rid := range rids {
+			p.ReleaseFetchCursor(rid)
+		}
+	}
 }
 
 func (s *Session) trackQueryRunResult(rid string) {

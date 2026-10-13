@@ -36,6 +36,7 @@ export function createGridHeader(
   root: HTMLElement,
   columns: GridColumn[],
   callbacks: HeaderCallbacks,
+  initialViewportWidth = 800,
 ): GridHeader {
   const row = document.createElement("div");
   row.className =
@@ -46,7 +47,7 @@ export function createGridHeader(
   let cols = columns;
   let sortDraft = callbacks.sortDraft;
   let scrollLeft = 0;
-  let viewportWidth = 800;
+  let viewportWidth = initialViewportWidth;
   let lastWindowKey = "";
   let dragCol: string | null = null;
   let resizeCol: string | null = null;

@@ -90,7 +90,9 @@ func (s *Session) OpenResult(ctx context.Context, src pager.Source) (pager.OpenR
 		return pager.OpenResult{}, err
 	}
 	s.registerResultChanges(open.RID, src.KeyColumns, src.Schema, src.Table)
-	s.replayPendingJournal(open.RID, src.Schema, src.Table)
+	if src.Kind != pager.SourceQuery {
+		s.replayPendingJournal(open.RID, src.Schema, src.Table)
+	}
 	s.wirePagerOverlay()
 	return open, nil
 }

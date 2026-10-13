@@ -2,7 +2,9 @@ package postgres
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -56,6 +58,60 @@ func typeNameForOID(oid uint32) string {
 	}
 }
 
+// decodeFromValue maps pgx Values() output into a window column (handles TOAST and binary codecs).
+func decodeFromValue(b *driver.ColumnBuilder, v any, row int) {
+	if v == nil {
+		b.SetNull(row)
+		return
+	}
+	switch x := v.(type) {
+	case bool:
+		b.SetBool(row, x)
+	case int64:
+		b.SetInt(row, x)
+	case int32:
+		b.SetInt(row, int64(x))
+	case int16:
+		b.SetInt(row, int64(x))
+	case int8:
+		b.SetInt(row, int64(x))
+	case int:
+		b.SetInt(row, int64(x))
+	case uint64:
+		b.SetInt(row, int64(x))
+	case float64:
+		b.SetFloat(row, x)
+	case float32:
+		b.SetFloat(row, float64(x))
+	case string:
+		b.SetText(row, x)
+	case []byte:
+		b.SetText(row, string(x))
+	case pgtype.Text:
+		if !x.Valid {
+			b.SetNull(row)
+			return
+		}
+		b.SetText(row, x.String)
+	case time.Time:
+		b.SetText(row, x.Format("2006-01-02 15:04:05.999999999"))
+	case pgtype.Timestamp:
+		if !x.Valid {
+			b.SetNull(row)
+			return
+		}
+		b.SetText(row, x.Time.Format("2006-01-02 15:04:05.999999999"))
+	case pgtype.Timestamptz:
+		if !x.Valid {
+			b.SetNull(row)
+			return
+		}
+		b.SetText(row, x.Time.Format("2006-01-02 15:04:05.999999999-07:00"))
+	default:
+		b.SetText(row, fmt.Sprint(x))
+	}
+}
+
 func decodeIntoColumn(b *driver.ColumnBuilder, oid uint32, raw []byte, row int) {
 	if raw == nil {
 		b.SetNull(row)
@@ -81,7 +137,8 @@ func decodeIntoColumn(b *driver.ColumnBuilder, oid uint32, raw []byte, row int) 
 	case pgtype.ByteaOID:
 		b.SetText(row, decodeBytea(raw))
 	default:
-		b.SetText(row, string(raw))
+		cp := append([]byte(nil), raw...)
+		b.SetText(row, string(cp))
 	}
 }
 

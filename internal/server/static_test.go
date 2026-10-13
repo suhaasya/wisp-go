@@ -10,6 +10,39 @@ import (
 	"github.com/suhaasya/wisp-go/internal/server"
 )
 
+func TestStatic_devEmbeddedAssetBeforeVite(t *testing.T) {
+	t.Parallel()
+	vite := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte("<!doctype html><html>vite</html>"))
+	}))
+	t.Cleanup(vite.Close)
+
+	fsys := fstest.MapFS{
+		"index.html":             {Data: []byte("<html><head></head><body>app</body></html>")},
+		"assets/chunk-abc123.js": {Data: []byte("export const x = 1;")},
+	}
+	st, err := server.NewStaticWithVite(fsys, true, vite.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := http.NewServeMux()
+	st.Register(mux)
+
+	req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, "/assets/chunk-abc123.js", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "javascript") {
+		t.Fatalf("Content-Type = %q, want javascript", ct)
+	}
+	if body := rec.Body.String(); body != "export const x = 1;" {
+		t.Fatalf("body = %q", body)
+	}
+}
+
 func TestStatic_cacheHeaders(t *testing.T) {
 	t.Parallel()
 	fsys := fstest.MapFS{
